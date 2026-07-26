@@ -4,6 +4,7 @@ import {
   SectionHeading,
   SiteChrome,
 } from "../components/site-chrome";
+import { withBasePath } from "../lib/site-path";
 
 export const metadata: Metadata = {
   title: "工作",
@@ -224,7 +225,7 @@ export default function WorkPage() {
           <figure className="work-tool-evidence">
             <div className="work-tool-image-crop diff-pair-image-crop">
               <img
-                src="/images/diff-pair-management.png"
+                src={withBasePath("/images/diff-pair-management.png")}
                 alt="差分对雷达的规则管理界面，可勾选网络并批量应用规则"
                 width="1000"
                 height="647"
@@ -302,7 +303,7 @@ export default function WorkPage() {
           <div className="work-tool-evidence-grid">
             <figure className="work-tool-evidence">
               <img
-                src="/images/fpc-pad-tool.png"
+                src={withBasePath("/images/fpc-pad-tool.png")}
                 alt="FPC 工坊压 PAD 工具，用截面图和顶视图展示处理前后差异"
                 width="1004"
                 height="730"
@@ -314,7 +315,7 @@ export default function WorkPage() {
             </figure>
             <figure className="work-tool-evidence">
               <img
-                src="/images/fpc-stiffener-calculator.png"
+                src={withBasePath("/images/fpc-stiffener-calculator.png")}
                 alt="FPC 工坊 PI 补强计算器，显示材料截面、补强厚度估算和应用选项"
                 width="997"
                 height="735"

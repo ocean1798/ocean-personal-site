@@ -80,9 +80,12 @@ test("renders the R4 hero and JLCEDA main story", async () => {
   ]);
 
   assert.match(html, /<html lang="zh-CN">/);
-  assert.match(html, /把复杂理清，/);
-  assert.match(html, /把判断留给人。/);
-  assert.doesNotMatch(html, /把复杂工具做清楚|把产品想法做出来/);
+  assert.match(html, /让噪声化为秩序，/);
+  assert.match(html, /让想法长出形状。/);
+  assert.doesNotMatch(
+    html,
+    /把复杂理清|把判断留给人|把复杂工具做清楚|把产品想法做出来/,
+  );
   assert.match(
     html,
     /我是 Ocean，负责嘉立创 EDA 专业版的 PCB\s*相关功能设计。我把复杂工程任务整理成清楚的软件流程，让工程师更容易看见问题、完成工作并保留判断。/,
