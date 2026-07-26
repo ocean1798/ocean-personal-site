@@ -5,6 +5,7 @@ import {
   SiteChrome,
 } from "./components/site-chrome";
 import { EdaScrollStory } from "./components/eda-scroll-story";
+import { withBasePath } from "./lib/site-path";
 
 const responsibilities = [
   {
@@ -31,9 +32,9 @@ export default function Home() {
         <div className="hero-copy">
           <p className="eyebrow">Product Manager · PCB / EDA</p>
           <h1>
-            把复杂理清，
+            让噪声化为秩序，
             <br />
-            把判断留给人。
+            让想法长出形状。
           </h1>
           <p className="hero-description">
             我是 Ocean，负责嘉立创 EDA 专业版的 PCB
@@ -52,7 +53,7 @@ export default function Home() {
         <figure className="hero-portrait">
           <div className="portrait-frame">
             <img
-              src="/images/ocean-pixel-portrait-v1.png"
+              src={withBasePath("/images/ocean-pixel-portrait-v1.png")}
               alt="Ocean 的像素插画肖像，戴圆框眼镜、穿深色上衣"
               width="1254"
               height="1254"
@@ -158,7 +159,7 @@ export default function Home() {
             <figure className="tool-card-visual">
               <div className="tool-image-crop diff-pair-image-crop">
                 <img
-                  src="/images/diff-pair-management.png"
+                  src={withBasePath("/images/diff-pair-management.png")}
                   alt="差分对雷达的规则管理界面，可在表格中确认差分网络并批量应用规则"
                   width="1000"
                   height="647"
@@ -224,7 +225,7 @@ export default function Home() {
             <div className="tool-card-visual tool-card-visual-split">
               <figure>
                 <img
-                  src="/images/fpc-pad-tool.png"
+                  src={withBasePath("/images/fpc-pad-tool.png")}
                   alt="FPC 工坊的压 PAD 工具，通过阻焊处理增强焊盘结合，并用截面图和顶视图解释变化"
                   width="1004"
                   height="730"
@@ -233,7 +234,7 @@ export default function Home() {
               </figure>
               <figure>
                 <img
-                  src="/images/fpc-stiffener-calculator.png"
+                  src={withBasePath("/images/fpc-stiffener-calculator.png")}
                   alt="FPC 工坊的 PI（常用柔性补强材料）补强计算器，展示材料截面、补强厚度估算和批量应用选项"
                   width="997"
                   height="735"

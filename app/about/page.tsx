@@ -4,6 +4,7 @@ import {
   SectionHeading,
   SiteChrome,
 } from "../components/site-chrome";
+import { withBasePath } from "../lib/site-path";
 
 export const metadata: Metadata = {
   title: "关于",
@@ -42,7 +43,7 @@ export default function AboutPage() {
         </div>
         <figure className="about-portrait">
           <img
-            src="/images/ocean-pixel-portrait-v1.png"
+            src={withBasePath("/images/ocean-pixel-portrait-v1.png")}
             alt="Ocean 的像素插画肖像"
             width="1254"
             height="1254"
