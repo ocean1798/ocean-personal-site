@@ -2,17 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 type SiteChromeProps = {
-  currentPath: "/" | "/work" | "/about";
   children: ReactNode;
 };
 
-const navigation = [
-  { href: "/", label: "首页" },
-  { href: "/work", label: "工作" },
-  { href: "/about", label: "关于" },
-] as const;
-
-export function SiteChrome({ currentPath, children }: SiteChromeProps) {
+export function SiteChrome({ children }: SiteChromeProps) {
   return (
     <div className="site-shell">
       <a className="skip-link" href="#main-content">
@@ -27,23 +20,6 @@ export function SiteChrome({ currentPath, children }: SiteChromeProps) {
             </span>
             <span>Ocean</span>
           </Link>
-
-          <nav className="site-nav" aria-label="主导航">
-            {navigation.map((item) => {
-              const isCurrent = item.href === currentPath;
-
-              return (
-                <Link
-                  className={`site-nav-link${isCurrent ? " is-current" : ""}`}
-                  href={item.href}
-                  aria-current={isCurrent ? "page" : undefined}
-                  key={item.href}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </header>
 
@@ -56,8 +32,9 @@ export function SiteChrome({ currentPath, children }: SiteChromeProps) {
               Ocean
             </Link>
             <p>
-              负责嘉立创 EDA 专业版部分 PCB
-              功能的产品设计，也在用个人工具探索新的解决办法。
+              Ocean｜负责
+              <span className="keep-together">嘉立创 EDA 专业版</span>
+              部分 PCB 功能的产品设计
             </p>
           </div>
 

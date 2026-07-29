@@ -49,6 +49,29 @@ function getToolSegments(html, pathname) {
   };
 }
 
+function readJpegDimensions(buffer) {
+  let offset = 2;
+
+  while (offset < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = buffer[offset + 1];
+    const length = buffer.readUInt16BE(offset + 2);
+    if ([0xc0, 0xc1, 0xc2].includes(marker)) {
+      return {
+        width: buffer.readUInt16BE(offset + 7),
+        height: buffer.readUInt16BE(offset + 5),
+      };
+    }
+    offset += 2 + length;
+  }
+
+  throw new Error("JPEG dimensions not found");
+}
+
 function assertPluginEvidenceContract(html, pathname) {
   const { diffPair, fpc } = getToolSegments(html, pathname);
   const requiredLabels = [
@@ -69,15 +92,17 @@ function assertPluginEvidenceContract(html, pathname) {
   assert.doesNotMatch(fpc, /Trae|没有手写一行代码|\bAI\b/);
 }
 
-test("renders the R4 hero and JLCEDA main story", async () => {
+test("renders the fixed hero and branded JLCEDA product section", async () => {
   const html = await render("/");
-  const [pageSource, storySource] = await Promise.all([
+  const [pageSource, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(
-      new URL("../app/components/eda-scroll-story.tsx", import.meta.url),
-      "utf8",
-    ),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
+  const heroActionsStart = html.indexOf('class="hero-actions"');
+  const heroActions = html.slice(
+    heroActionsStart,
+    html.indexOf("</div>", heroActionsStart),
+  );
 
   assert.match(html, /<html lang="zh-CN">/);
   assert.match(html, /让噪声化为秩序，/);
@@ -86,120 +111,178 @@ test("renders the R4 hero and JLCEDA main story", async () => {
     html,
     /把复杂理清|把判断留给人|把复杂工具做清楚|把产品想法做出来/,
   );
+  assert.match(html, /Ocean · 产品经理/);
   assert.match(
     html,
-    /我是 Ocean，负责嘉立创 EDA 专业版的 PCB\s*相关功能设计。我把复杂工程任务整理成清楚的软件流程，让工程师更容易看见问题、完成工作并保留判断。/,
-  );
-  assert.match(html, /团队产品 · 主案例/);
-  assert.match(html, /一台小设备背后，/);
-  assert.match(html, /是一场复杂性的整理/);
-  assert.match(
-    html,
-    /普通用户只看到一个 USB-C\s*扩展坞；工程师要同时处理接口、连接、信号、电源、空间和制造。嘉立创 EDA\s*专业版帮助工程师把这些约束组织成可看、可做、可检查、可交付的设计工作。/,
+    /我负责<span class="keep-together">嘉立创 EDA 专业版<\/span>中部分 PCB\s*功能的产品设计，也在用 AI 把自己的产品想法做成真实工具。/,
   );
   assert.match(
     html,
-    /这个扩展坞是帮助解释 EDA 的通用示意，不对应 Ocean\s*或公司的真实硬件项目；Ocean 没有参与它的硬件设计。/,
+    /class="hero-actions"><a class="text-link" href="#lceda-work">继续看看/,
   );
-  assert.match(html, /真正装进电子设备里的电路板/);
-  assert.match(html, /工程师用来设计电路和电路板的软件/);
+  assert.equal((heroActions.match(/<a /g) ?? []).length, 1);
+  assert.doesNotMatch(heroActions, /看我的工作|了解我|href="\/(?:work|about)"/);
+  assert.doesNotMatch(heroActions, /class="button button-(?:primary|secondary)"/);
+  assert.match(html, /id="lceda-work"/);
+  assert.match(html, /产品工作/);
   assert.match(
     html,
-    /嘉立创 EDA 专业版由团队共同完成；Ocean 负责其中部分 PCB\s*功能的产品设计，与研发、测试共同推进落地。/,
+    /<span class="lceda-title-line">让 <span class="keep-together">PCB 工程师<\/span>的想法<\/span><span class="lceda-title-line">在 <span class="keep-together">嘉立创 EDA<\/span><\/span><span class="lceda-title-line">落地生根。<\/span>/,
   );
-  assert.equal(
-    (
-      `${pageSource}\n${storySource}`.match(
-        /嘉立创 EDA 专业版由团队共同完成；Ocean 负责其中部分 PCB/g,
-      ) ?? []
-    ).length,
-    1,
-    "home should include the behind-the-scenes ownership note once",
+  assert.match(
+    html,
+    /嘉立创 EDA\s*是工程师用来设计电路和电路板的软件。工程师在这里连接元件、安排布局和走线、检查设计，再生成交给工厂的文件。/,
   );
-  assert.match(html, /EDA\s*帮助工程师看见和处理约束，但不替代工程判断/);
-  assert.match(html, /也不是\s*Ocean 设计的硬件项目/);
+  assert.match(
+    html,
+    /我的工作不是设计电路板，而是设计工程师用来完成这些工作的软件。我负责专业版中部分\s*PCB\s*功能的产品设计：先弄清实际问题，再把信息、操作和反馈整理成清楚的流程，和研发、测试一起把功能做出来。/,
+  );
+  assert.match(
+    html,
+    /src="\/images\/brand\/jlceda-logo-cn\.svg"[^>]*alt="嘉立创 EDA"/,
+  );
+  assert.match(
+    html,
+    /src="\/images\/brand\/jlceda-professional-banner\.png"[^>]*alt="嘉立创 EDA 专业版公开产品主视觉"/,
+  );
+  assert.match(html, /打开嘉立创 EDA 专业版/);
+  assert.doesNotMatch(
+    html,
+    /我的工作 · 嘉立创 EDA 专业版|先弄清工程师哪里卡住|嘉立创 EDA 专业版由团队共同完成。下面只说明我参与的部分 PCB\s*产品工作。/,
+  );
+  assert.doesNotMatch(
+    html,
+    /找到真实问题|把流程设计清楚|跟到真正能用|团队产品 · 主案例|一台小设备|USB-C|扩展坞|名词解释|查看公开帮助文档|eda-story|home-about|contact-cta/,
+  );
+  assert.doesNotMatch(
+    html,
+    /关于 Ocean|保持联系|查看两个插件的完整工作过程/,
+  );
+  assert.doesNotMatch(pageSource, /EdaScrollStory|eda-main-case|productWork/);
+  assert.match(
+    css,
+    /\.keep-together\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/,
+  );
+  assert.match(
+    css,
+    /\.lceda-feature h2,[\s\S]*?\{[^}]*text-wrap:\s*balance;[^}]*\}/,
+  );
+  assert.match(
+    css,
+    /\.lceda-title-line\s*\{[^}]*display:\s*block;[^}]*white-space:\s*nowrap;[^}]*\}/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 680px\)[\s\S]*?\.site-brand > span:last-child\s*\{[^}]*display:\s*inline;/,
+  );
+  assert.match(html, /我眼中的世界/);
+  assert.doesNotMatch(html, /12 张照片，分成三组。/);
+  assert.match(html, /01 深圳美术馆/);
+  assert.match(html, /02 海边/);
+  assert.match(html, /03 深圳/);
+  assert.match(html, /看看更多/);
+  assert.doesNotMatch(html, /看摄影作品/);
 });
 
-test("keeps the complete six-step story and six constraints in semantic HTML", async () => {
+test("keeps only the home logo in every public header and exposes no About link", async () => {
+  const pages = await Promise.all(
+    ["/", "/work", "/about", "/photography"].map(async (pathname) => ({
+      pathname,
+      html: await render(pathname),
+    })),
+  );
+
+  for (const { pathname, html } of pages) {
+    const headerStart = html.indexOf('<header class="site-header">');
+    const header = html.slice(headerStart, html.indexOf("</header>", headerStart));
+
+    assert.match(html, /<a href="\/" class="site-brand" aria-label="Ocean 首页">/);
+    assert.equal((header.match(/<a /g) ?? []).length, 1, pathname);
+    assert.doesNotMatch(header, /<nav\b|site-nav|aria-current/, pathname);
+    assert.doesNotMatch(html, /href="\/about"/, pathname);
+  }
+});
+
+test("keeps the personal tool exploration factual and concise", async () => {
   const html = await render("/");
-  const expectedCopy = [
-    "目标很直观：用一根 USB-C 线，把需要的设备连接起来。",
-    "工程师要同时权衡接口、连接、信号、电源、空间和制造；它们彼此影响，没有一个按钮能自动给出正确答案。",
-    "工程师借助 EDA 梳理元件和网络关系，让连接可见、可编辑、可检查。",
-    "EDA 提供设计画布和工具，工程师结合信号、电源、结构与制造要求作出布局和布线判断。",
-    "规则检查帮助工程师更早发现冲突；提示是判断线索，不是替工程师作决定。",
-    "工程师确认设计后，才生成制造文件并进入生产；最终电路板回到通用扩展坞，熟悉目标成为可交付成品。",
-  ];
-  const expectedConstraints = [
-    ["接口", "要接入哪些设备、提供哪些能力"],
-    ["连接", "元件和网络应该怎样相连"],
-    ["信号", "高速信号怎样稳定传输"],
-    ["电源", "不同器件怎样得到合适供电"],
-    ["空间", "接口、元件和线路怎样放进有限板面"],
-    ["制造", "设计怎样完成检查并交给工厂生产"],
-  ];
+  const { diffPair, fpc } = getToolSegments(html, "/");
 
-  assert.match(html, /<ol class="eda-story-semantic-list">/);
-  for (const title of [
-    "熟悉目标",
-    "工程约束",
-    "连接",
-    "布局",
-    "规则检查",
-    "制造交付",
-  ]) {
-    assert.match(html, new RegExp(title));
-  }
-  for (const copy of expectedCopy) {
-    assert.ok(html.includes(copy), `story should include: ${copy}`);
-  }
-  for (const [name, explanation] of expectedConstraints) {
-    assert.match(html, new RegExp(`<strong>${name}</strong>`));
-    assert.ok(
-      html.includes(explanation),
-      `constraint should explain: ${explanation}`,
+  assert.match(html, /个人作品/);
+  assert.match(html, /把具体问题，做成可以使用的工具。/);
+  assert.match(
+    html,
+    /我通过嘉立创 EDA 的公开扩展能力做了两个个人插件。它们是个人作品，不是公司项目。/,
+  );
+  for (const segment of [diffPair, fpc]) {
+    assert.equal((segment.match(/<img /g) ?? []).length, 1);
+    assert.equal((segment.match(/https:\/\/jlc-ext\.com/g) ?? []).length, 1);
+    assert.doesNotMatch(
+      segment,
+      /<dl|project-meta|公开源码|github\.com|不能推出什么结论/,
     );
   }
-  assert.match(html, /提示问题，决定仍由工程师完成/);
-  assert.match(html, /板图/);
-  assert.match(html, /钻孔/);
-  assert.match(html, /装配资料/);
+  assert.match(
+    diffPair,
+    /按命名规则找出可能的差分对，工程师核对后可批量写入规则，减少逐条查找和配置。/,
+  );
+  assert.match(
+    diffPair,
+    /我负责问题定义、范围、交互和验收，通过 Trae\s*完成实现，没有手写代码。/,
+  );
+  assert.match(
+    fpc,
+    /把焊盘处理、补强厚度和材料参考整理成图解与估算，帮助工程师做前期判断。/,
+  );
+  assert.match(
+    fpc,
+    /我负责把专业知识和决策步骤整理成可操作的界面。/,
+  );
+  assert.match(
+    fpc,
+    /src="\/images\/fpc-stiffener-calculator\.png"/,
+  );
+  assert.doesNotMatch(
+    html,
+    /个人插件 · 边界探索|观察核心与|正式产品边界|fpc-pad-tool/,
+  );
 });
 
-test("keeps the same four-evidence plugin contract on home and work", async () => {
+test("keeps public plugin evidence on home and detailed boundaries on work", async () => {
   const [home, work] = await Promise.all([render("/"), render("/work")]);
-  const sectionIntro =
-    "差分对雷达处理重复操作，FPC 工坊整理专业知识。它们让我从个人扩展作者一侧走过发现问题、定义范围、实现、核对和公开发布的链路，帮助继续探索哪些需求适合核心产品、哪些可由扩展承接；这不是公司的正式边界结论。";
 
-  for (const [pathname, html] of [
-    ["/", home],
-    ["/work", work],
-  ]) {
-    assert.match(html, /个人插件 · 边界探索/);
-    assert.match(
-      html,
-      /<span class="section-heading-title-line">从两个个人插件，<\/span><span class="section-heading-title-line">观察核心与<span class="keep-together">扩展<\/span>的边界<\/span>/,
-    );
-    assert.ok(html.includes(sectionIntro));
-    assertPluginEvidenceContract(html, pathname);
+  for (const html of [home, work]) {
     assert.match(
       html,
       /https:\/\/jlc-ext\.com\/item\/oshwhub\/diff-pair-assistant/,
     );
     assert.match(
       html,
-      /https:\/\/github\.com\/ocean1798\/JLCEDA-diff-pair-assistant/,
-    );
-    assert.match(
-      html,
       /https:\/\/jlc-ext\.com\/item\/oshwhub\/fpc-workshop/,
     );
-    assert.match(html, /https:\/\/github\.com\/ocean1798\/fpc-workshop/);
+  }
+
+  assert.doesNotMatch(
+    home,
+    /https:\/\/github\.com\/ocean1798\/(?:JLCEDA-diff-pair-assistant|fpc-workshop)/,
+  );
+  assert.match(
+    work,
+    /https:\/\/github\.com\/ocean1798\/JLCEDA-diff-pair-assistant/,
+  );
+  assert.match(
+    work,
+    /https:\/\/github\.com\/ocean1798\/fpc-workshop/,
+  );
+
+  for (const html of [home, work]) {
     assert.doesNotMatch(
       html,
       /边界已验证|作者体验顺畅|生态成功|影响内部路线/,
     );
   }
+
+  assertPluginEvidenceContract(work, "/work");
+  assert.match(work, /个人插件 · 边界探索/);
 });
 
 test("renders the work route in the right evidence hierarchy", async () => {
@@ -236,11 +319,88 @@ test("renders the about route as a point of view rather than a resume", async ()
   assert.match(html, /产品：让不同视角走向同一个结果/);
   assert.match(html, /AI 与 Agent，不急着给答案/);
   assert.match(html, /https:\/\/pro\.lceda\.cn\/editor/);
+  assert.match(html, /看我的摄影作品/);
+  assert.match(html, /href="\/photography"/);
   assert.match(html, /mailto:2711180012@qq\.com/);
 });
 
+test("renders the photography route as twelve unclassified observations", async () => {
+  const html = await render("/photography");
+  const [pageSource, css] = await Promise.all([
+    readFile(new URL("../app/photography/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  const expectedAlts = [
+    "展厅中，密集红线从天花垂下，旧行李箱散落在地面",
+    "浅色背景前，由细金属丝交叠形成的团状雕塑",
+    "夜色中，红色桥梁与放射状桥索横跨江面",
+    "暮色里，高楼立面由重复窗格和竖线分割",
+    "蓝色海面上一枚黄色浮标，远处货船沿山脚排开",
+    "海浪拍向褐色礁石，远处小船散在蓝色海面",
+    "右侧岩壁切开大面积天空与海面，远处有一艘小船",
+    "蓝色海港中，一艘红帆船驶过城市与山影",
+    "厚重雨云压过城市，远处雨幕落在建筑群上",
+    "高空俯瞰深圳建筑群，明亮积云覆盖城市上空",
+    "橙色晚霞越过深色山影与云层",
+    "飞机翼尖指向橙紫色地平线，弯月悬在暗色天空",
+  ];
+  const expectedCaptions = [
+    "01 深圳美术馆",
+    "02 深圳美术馆",
+    "03 重庆",
+    "04 楼宇间的白云",
+    "05 海边",
+    "06 天文台",
+    "07 美人鱼拍摄取景地",
+    "08 香港",
+    "09 深圳",
+    "10 深圳",
+    "11 夕阳",
+    "12 飞机上拍下的景象",
+  ];
+
+  assert.match(html, /<h1>我眼中的世界<\/h1>/);
+  assert.doesNotMatch(
+    html,
+    /Photography \/ 摄影|线条与形状|云、雨和暮色|Lines &amp; Shapes|By the Sea|Clouds, Rain &amp; Dusk|材料不同，但它们都靠重复和交叠形成画面|我喜欢把海拍得有一个明确的参照物|天空一变，熟悉的城市也会跟着变/,
+  );
+  assert.equal(
+    (html.match(/class="photography-item /g) ?? []).length,
+    12,
+    "photography page should render twelve fixed photo positions",
+  );
+
+  for (const alt of expectedAlts) {
+    assert.ok(html.includes(`alt="${alt}"`), `missing alt text: ${alt}`);
+  }
+  for (const caption of expectedCaptions) {
+    const [number, ...source] = caption.split(" ");
+    assert.ok(
+      html.includes(`<span>${number}</span>${source.join(" ")}`),
+      `missing photo source caption: ${caption}`,
+    );
+  }
+
+  assert.doesNotMatch(pageSource, /masonry|carousel|lightbox|object-fit/i);
+  assert.doesNotMatch(html, /weather-fog-tower|weather-sunset-city/);
+  assert.match(css, /\.photo-pair-large\s*\{[\s\S]*?grid-column:\s*1 \/ 8/);
+  assert.match(css, /\.photo-pair-small\s*\{[\s\S]*?grid-column:\s*8 \/ 13/);
+  assert.match(css, /\.photo-closing\s*\{[\s\S]*?grid-column:\s*5 \/ 13/);
+  assert.match(css, /\.photography-frame\s*\{[\s\S]*?border-radius:\s*18px/);
+  assert.match(css, /translateY\(24px\)/);
+  assert.match(css, /transition-delay:\s*80ms/);
+  assert.match(css, /translateY\(-3px\) scale\(1\.015\)/);
+  assert.match(
+    css,
+    /@media \(max-width: 680px\)[\s\S]*?\.photography-frame\s*\{[\s\S]*?border-radius:\s*12px/,
+  );
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
 test("keeps all public pages free of job-seeking and preview signals", async () => {
-  const pages = await Promise.all(["/", "/work", "/about"].map(render));
+  const pages = await Promise.all(
+    ["/", "/work", "/about", "/photography"].map(render),
+  );
 
   for (const html of pages) {
     assert.doesNotMatch(html, /codex-preview|_sites-preview/i);
@@ -250,9 +410,79 @@ test("keeps all public pages free of job-seeking and preview signals", async () 
       /公开求职|正在求职|求职中|求职意向|下载简历|简历下载|接受机会/,
     );
     assert.doesNotMatch(html, /react-loading-skeleton/);
-    assert.match(html, /用个人工具探索新的解决办法/);
-    assert.doesNotMatch(html, /用个人工具验证新的解决办法/);
+    assert.match(
+      html,
+      /Ocean｜负责<span class="keep-together">嘉立创 EDA 专业版<\/span>部分 PCB 功能的产品设计/,
+    );
+    assert.doesNotMatch(
+      html,
+      /用个人工具(?:探索|验证)新的解决办法/,
+    );
   }
+});
+
+test("ships only sanitized responsive photography derivatives", async () => {
+  const html = await render("/photography");
+  const expectedNames = [
+    "lines-red-installation",
+    "lines-wire-sculpture",
+    "lines-bridge-cables",
+    "lines-window-grid",
+    "sea-yellow-buoy",
+    "sea-rock-waves",
+    "sea-cliff",
+    "sea-harbor-boat",
+    "sky-rain-city",
+    "sky-clouds-city",
+    "sky-sunset",
+    "sky-airplane-twilight",
+  ];
+  const publicPhotoNames = await readdir(
+    new URL("../public/images/photography/", import.meta.url),
+  );
+  const builtPhotoNames = await readdir(
+    new URL("../dist/client/images/photography/", import.meta.url),
+  );
+
+  assert.equal(publicPhotoNames.length, 36);
+  assert.deepEqual(builtPhotoNames.sort(), publicPhotoNames.sort());
+
+  for (const name of expectedNames) {
+    for (const suffix of ["-900.webp", "-1800.webp", "-1800.jpg"]) {
+      assert.ok(
+        publicPhotoNames.includes(`${name}${suffix}`),
+        `missing ${name}${suffix}`,
+      );
+    }
+
+    const declaredSize = html.match(
+      new RegExp(
+        `<img src="/images/photography/${name}-1800\\.jpg"[^>]*width="(\\d+)" height="(\\d+)"`,
+      ),
+    );
+    assert.ok(declaredSize, `missing rendered dimensions for ${name}`);
+
+    const jpeg = await readFile(
+      new URL(
+        `../public/images/photography/${name}-1800.jpg`,
+        import.meta.url,
+      ),
+    );
+    const actualSize = readJpegDimensions(jpeg);
+    assert.deepEqual(
+      {
+        width: Number(declaredSize[1]),
+        height: Number(declaredSize[2]),
+      },
+      actualSize,
+      `${name} rendered dimensions should match its 1800 JPEG`,
+    );
+  }
+
+  assert.doesNotMatch(
+    publicPhotoNames.join("\n"),
+    /\.(?:arw|heic|mov|jpeg)$/i,
+  );
 });
 
 test("uses local evidence images and an HTML/CSS story with static fallbacks", async () => {

@@ -50,7 +50,7 @@ const responsibilities = [
 
 export default function WorkPage() {
   return (
-    <SiteChrome currentPath="/work">
+    <SiteChrome>
       <header className="page-hero work-page-hero section">
         <div>
           <p className="eyebrow">Work / 工作</p>

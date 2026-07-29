@@ -8,12 +8,22 @@ const routes = [
   ["home", new URL("../out/index.html", import.meta.url)],
   ["work", new URL("../out/work/index.html", import.meta.url)],
   ["about", new URL("../out/about/index.html", import.meta.url)],
+  [
+    "photography",
+    new URL("../out/photography/index.html", import.meta.url),
+  ],
 ];
 
 async function assertLocalReferencesResolve(html, pageName) {
-  const references = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(
+  const directReferences = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(
     (match) => match[1],
   );
+  const responsiveReferences = [
+    ...html.matchAll(/src[Ss]et="([^"]+)"/g),
+  ].flatMap((match) =>
+    match[1].split(",").map((candidate) => candidate.trim().split(/\s+/, 1)[0]),
+  );
+  const references = [...directReferences, ...responsiveReferences];
   let localReferenceCount = 0;
 
   for (const reference of references) {
@@ -71,18 +81,29 @@ test("prefixes framework assets, links, and public images with the repository pa
 
   const home = pages[0];
   assert.match(home, new RegExp(`href="${basePath}/"`));
-  assert.match(home, new RegExp(`href="${basePath}/work/"`));
-  assert.match(home, new RegExp(`href="${basePath}/about/"`));
+  assert.doesNotMatch(home, new RegExp(`href="${basePath}/work/"`));
+  assert.doesNotMatch(home, new RegExp(`href="${basePath}/about/"`));
+  assert.match(home, new RegExp(`href="${basePath}/photography/"`));
   assert.match(
     home,
     new RegExp(`src="${basePath}/images/ocean-pixel-portrait-v1.png"`),
+  );
+  assert.match(
+    home,
+    new RegExp(`src="${basePath}/images/brand/jlceda-logo-cn.svg"`),
+  );
+  assert.match(
+    home,
+    new RegExp(
+      `src="${basePath}/images/brand/jlceda-professional-banner.png"`,
+    ),
   );
 });
 
 test("rejects root-relative references that omit the repository base path", async () => {
   await assert.rejects(
     assertLocalReferencesResolve(
-      '<a href="/about/">About</a><img src="/favicon.svg">',
+      '<a href="/about/">About</a><source srcset="/photo.webp 1x"><img src="/favicon.svg">',
       "invalid fixture",
     ),
     /should include the repository base path/,

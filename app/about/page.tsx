@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ExternalArrow,
@@ -31,7 +32,7 @@ const perspectives = [
 
 export default function AboutPage() {
   return (
-    <SiteChrome currentPath="/about">
+    <SiteChrome>
       <header className="about-hero section">
         <div className="about-hero-copy">
           <p className="eyebrow">About / 关于</p>
@@ -133,6 +134,9 @@ export default function AboutPage() {
           <p>
             我喜欢在取景时决定什么该留下，也喜欢看一个数字模型经过反复调整后变成真实物件。它们都提醒我：好的结果，往往来自很多次克制的小判断。
           </p>
+          <Link className="text-link" href="/photography">
+            看我的摄影作品 <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </section>
 
