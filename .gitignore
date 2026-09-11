@@ -40,3 +40,9 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Nested prototype dependencies and generated output
+**/node_modules/
+**/dist/
+**/evidence/runtime/
+**/evidence/server/*.log

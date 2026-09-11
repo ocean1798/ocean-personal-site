@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-08-09T16:56:54.083Z",
+  "model": {
+    "bytes": 1573424,
+    "gzipBytes": 389563
+  },
+  "posters": {
+    "avifBytes": 19344,
+    "webpBytes": 41156
+  },
+  "codeGzipBytes": 257880,
+  "dynamicAssets": [
+    {
+      "path": "dist/assets/index-Blu3clBA.js",
+      "bytes": 858600,
+      "gzipBytes": 256141
+    },
+    {
+      "path": "dist/assets/index-TAcAQINd.css",
+      "bytes": 4840,
+      "gzipBytes": 1739
+    },
+    {
+      "path": "dist/assets/model-3d-default-74gyGTsU.webp",
+      "bytes": 41156,
+      "gzipBytes": 40062
+    },
+    {
+      "path": "dist/assets/model-3d-default-FsbMFX-l.avif",
+      "bytes": 19344,
+      "gzipBytes": 19203
+    },
+    {
+      "path": "dist/assets/ocean-wordmark-ClXCnccc.glb",
+      "bytes": 1573424,
+      "gzipBytes": 389563
+    }
+  ]
+}

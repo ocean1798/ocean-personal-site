@@ -1,0 +1,52 @@
+{
+  "name": "ocean-r7-visual-poc",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4177",
+    "dev:model-3d": "vite --host 127.0.0.1 --port 4178 --strictPort",
+    "assets": "node scripts/generate-posters.mjs",
+    "assets:model-3d": "node scripts/generate-model-3d.mjs",
+    "build:main": "npm run assets && vite build --base ./ --outDir dist/main",
+    "build:three": "vite build experiments/three --base ./ --outDir ../../dist/three --emptyOutDir",
+    "build:r3f": "vite build experiments/r3f --base ./ --outDir ../../dist/r3f --emptyOutDir",
+    "build:lenis": "vite build experiments/lenis --base ./ --outDir ../../dist/lenis --emptyOutDir",
+    "build:postprocessing": "vite build experiments/postprocessing --base ./ --outDir ../../dist/postprocessing --emptyOutDir",
+    "build:model-3d": "vite build modules/model-3d --base ./ --outDir dist --emptyOutDir",
+    "build": "npm run build:main && npm run build:three && npm run build:r3f && npm run build:lenis && npm run build:postprocessing",
+    "preview": "vite preview --host 127.0.0.1 --port 4177",
+    "typecheck": "tsc --noEmit",
+    "typecheck:model-3d": "tsc --noEmit -p modules/model-3d/tsconfig.json",
+    "lint": "eslint .",
+    "lint:model-3d": "eslint --ignore-pattern modules/model-3d/dist/** modules/model-3d scripts/generate-model-3d.mjs scripts/measure-model-3d.mjs tests/model-3d.contract.test.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:model-3d": "node --test tests/model-3d.contract.test.mjs",
+    "measure": "node scripts/report-gzip.mjs",
+    "measure:model-3d": "node scripts/measure-model-3d.mjs",
+    "verify:model-3d": "npm run assets:model-3d && npm run typecheck:model-3d && npm run lint:model-3d && npm run test:model-3d && npm run build:model-3d && npm run measure:model-3d",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run measure"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@types/three": "0.185.4",
+    "eslint": "10.8.1",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.9.0",
+    "sharp": "0.35.3",
+    "three.regular.helvetiker": "1.0.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.66.0",
+    "vite": "8.2.1"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "lenis": "1.3.26",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  }
+}

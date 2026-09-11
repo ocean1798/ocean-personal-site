@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lenis 独立实验</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="scroll-experiment">
+      <h1>原生滚动 / Lenis 对照</h1>
+      <p id="status">准备中</p>
+      <nav aria-label="滚动验证">
+        <a href="#target">跳到目标</a>
+        <a href="#top" id="top">回到顶部</a>
+      </nav>
+      <section class="scroll-target" id="target" tabindex="-1">
+        <h2>锚点目标</h2>
+        <p>Home、End、PageUp、PageDown、方向键与浏览器历史保持原生事件。</p>
+      </section>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

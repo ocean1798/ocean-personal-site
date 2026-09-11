@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Ocean R7 视觉系统与交互首屏隔离技术样机"
+    />
+    <title>Ocean · R7 成形回路样机</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+    <div class="prototype-shell">
+      <header class="site-hud hud-top" aria-label="网站导航与阅读控制">
+        <a class="hud-brand" href="#hero" aria-label="回到 Ocean 首屏">OCEAN</a>
+        <nav class="hud-nav" aria-label="样机导航">
+          <a href="#hero">首页</a>
+          <a href="#prototype-boundary">作品</a>
+          <a href="#role-boundary">关于</a>
+          <button
+            class="static-reading-toggle"
+            id="static-reading-toggle"
+            type="button"
+            aria-pressed="false"
+            hidden
+          >
+            静态阅读
+            <span id="static-reading-state">未开启</span>
+          </button>
+        </nav>
+      </header>
+
+      <main id="main-content">
+        <section class="hero" id="hero" aria-labelledby="hero-title">
+          <div class="hero-viewport">
+            <div class="stage-background" aria-hidden="true"></div>
+
+            <picture class="fallback-poster poster-initial">
+              <source
+                media="(max-width: 860px)"
+                type="image/avif"
+                srcset="/posters/mobile-static.avif"
+              />
+              <source
+                media="(max-width: 860px)"
+                type="image/webp"
+                srcset="/posters/mobile-static.webp"
+              />
+              <source type="image/avif" srcset="/posters/desktop-initial.avif" />
+              <img
+                src="/posters/desktop-initial.webp"
+                alt="半透明柔性电路带沿两条铜色差分走线收束成 Ocean 的 O，表达把工程噪声整理成清楚产品。"
+                width="1440"
+                height="900"
+              />
+            </picture>
+
+            <picture class="fallback-poster poster-formed">
+              <source
+                media="(max-width: 860px)"
+                type="image/avif"
+                srcset="/posters/mobile-static.avif"
+              />
+              <source
+                media="(max-width: 860px)"
+                type="image/webp"
+                srcset="/posters/mobile-static.webp"
+              />
+              <source type="image/avif" srcset="/posters/desktop-formed.avif" />
+              <img
+                src="/posters/desktop-formed.webp"
+                alt="半透明柔性电路带沿两条铜色差分走线收束成 Ocean 的 O，表达把工程噪声整理成清楚产品。"
+                width="1440"
+                height="900"
+              />
+            </picture>
+
+            <div class="visual-stage" id="visual-stage"></div>
+            <div class="hud-grid" aria-hidden="true"></div>
+
+            <div class="stickers" aria-hidden="true">
+              <span class="sticker sticker-ocean">
+                <i>O</i><b>OCEAN / PM</b>
+              </span>
+              <span class="sticker sticker-eda">
+                <i></i><b>EDA / PCB</b>
+              </span>
+              <span class="sticker sticker-diff">
+                <i></i><b>DIFF PAIR</b>
+              </span>
+              <span class="sticker sticker-fpc">
+                <i></i><b>FPC / FLEX</b>
+              </span>
+              <span class="sticker sticker-drc">
+                <i></i><b>DRC / CHECK</b>
+              </span>
+            </div>
+
+            <div class="hero-content">
+              <p class="eyebrow">OCEAN · 产品经理 / EDA · PCB</p>
+              <h1 id="hero-title">
+                <span>让噪声化为秩序，</span>
+                <span>让想法长出形状。</span>
+              </h1>
+              <p class="hero-summary">
+                我是 Ocean，负责嘉立创 EDA 专业版中部分 PCB 功能的产品设计。它是团队共同完成的产品；我把复杂工程任务整理成清楚的软件流程。
+              </p>
+              <p class="role-boundary" id="role-boundary">
+                团队产品 · 我的职责：部分 PCB 功能产品设计
+              </p>
+              <a class="hero-link" href="#prototype-boundary">
+                继续看看 <span aria-hidden="true">↓</span>
+              </a>
+            </div>
+
+            <p class="visual-status" id="visual-status" aria-live="polite">
+              静态首屏已就绪
+            </p>
+            <div class="site-hud hud-bottom" aria-hidden="true">
+              <p>INTRO · EDA / PCB PRODUCT</p>
+              <p>首屏 01</p>
+            </div>
+
+            <noscript>
+              <p class="noscript-status">静态首屏 · 不需要脚本即可阅读与继续</p>
+            </noscript>
+          </div>
+        </section>
+
+        <section class="prototype-boundary" id="prototype-boundary" tabindex="-1">
+          <p>R7 隔离样机到此为止；主入口保留浏览器原生锚点与滚动行为。</p>
+          <a href="#hero">返回首屏</a>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

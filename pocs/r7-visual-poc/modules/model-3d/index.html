@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Ocean · Product Manager</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="m1-scroll-range" aria-hidden="true"></div>
+    <main class="m1-shell" id="m1-interaction-field" aria-labelledby="m1-title">
+      <div class="m1-grid" aria-hidden="true">
+        <span class="m1-grid-x m1-grid-x-1"></span>
+        <span class="m1-grid-x m1-grid-x-2"></span>
+        <span class="m1-grid-x m1-grid-x-3"></span>
+        <span class="m1-grid-x m1-grid-x-4"></span>
+        <span class="m1-grid-y m1-grid-y-1"></span>
+        <span class="m1-grid-y m1-grid-y-2"></span>
+        <i class="m1-cross m1-cross-1"></i><i class="m1-cross m1-cross-2"></i>
+        <i class="m1-cross m1-cross-3"></i><i class="m1-cross m1-cross-4"></i>
+        <i class="m1-cross m1-cross-5"></i><i class="m1-cross m1-cross-6"></i>
+        <i class="m1-cross m1-cross-7"></i><i class="m1-cross m1-cross-8"></i>
+      </div>
+
+      <section class="m1-intro-grid" aria-label="Ocean 简介">
+        <article class="m1-intro m1-intro-identity" id="profile">
+          <p class="m1-index">01 / IDENTITY</p>
+          <h2>OCEAN</h2>
+          <p>产品经理，专注复杂专业工具的产品体验与工作流设计。</p>
+        </article>
+
+        <article class="m1-intro m1-intro-role" id="work">
+          <p class="m1-index">02 / CURRENT ROLE</p>
+          <h2>PRODUCT MANAGER</h2>
+          <p>负责嘉立创 EDA 专业版中部分 PCB 功能的产品设计。</p>
+        </article>
+
+        <article class="m1-intro m1-intro-focus" id="contact">
+          <nav class="m1-nav" aria-label="首屏导航">
+            <a href="#profile">ABOUT</a>
+            <a href="#work">WORK</a>
+            <a href="#contact">CONTACT</a>
+            <button
+              id="m1-static-toggle"
+              type="button"
+              aria-label="开启 3D"
+              aria-pressed="true"
+            >
+              开启 3D
+            </button>
+          </nav>
+          <p class="m1-index">03 / FOCUS</p>
+          <h2>PCB PRODUCT FLOWS</h2>
+          <p>把复杂约束整理成清楚、可靠、能被工程师直接使用的产品路径。</p>
+          <span id="m1-status" role="status" aria-live="polite">静态海报已就绪</span>
+        </article>
+      </section>
+
+      <div class="m1-poster" aria-hidden="true">
+        <picture>
+          <source
+            srcset="../../public/posters/model-3d-default.avif"
+            type="image/avif"
+          />
+          <img
+            src="../../public/posters/model-3d-default.webp"
+            width="1280"
+            height="720"
+            alt=""
+          />
+        </picture>
+      </div>
+
+      <div class="m1-canvas-layer" id="m1-canvas-layer" aria-hidden="true"></div>
+
+      <section class="m1-manifesto" aria-label="Ocean 的产品宣言">
+        <h1 id="m1-title">
+          <span>I TURN COMPLEX</span>
+          <span>EDA WORK INTO</span>
+          <span>CLEAR PRODUCT FLOWS</span>
+        </h1>
+      </section>
+
+      <noscript>
+        <p class="m1-noscript">当前为静态阅读模式；正文与 ocean 海报仍可完整阅读。</p>
+      </noscript>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

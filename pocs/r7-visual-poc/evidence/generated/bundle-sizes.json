@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-08-09T13:17:47.299Z",
+  "metric": "gzipSync level 9 over emitted JS and CSS",
+  "webglBudgetBytes": 409600,
+  "targets": {
+    "main": {
+      "files": [
+        {
+          "file": "assets/index-Bd1HAWxk.js",
+          "rawBytes": 4559,
+          "gzipBytes": 2179
+        },
+        {
+          "file": "assets/index-yHjWgXnz.css",
+          "rawBytes": 12034,
+          "gzipBytes": 3455
+        },
+        {
+          "file": "assets/ocean-scene-6nkg8uIl.js",
+          "rawBytes": 528491,
+          "gzipBytes": 132021
+        }
+      ],
+      "totalGzipBytes": 137655,
+      "totalGzipKiB": 134.43
+    },
+    "three": {
+      "files": [
+        {
+          "file": "assets/index-BstJR_5o.js",
+          "rawBytes": 529952,
+          "gzipBytes": 132700
+        },
+        {
+          "file": "assets/index-XmOIuZtQ.css",
+          "rawBytes": 1185,
+          "gzipBytes": 550
+        }
+      ],
+      "totalGzipBytes": 133250,
+      "totalGzipKiB": 130.13
+    },
+    "r3f": {
+      "files": [
+        {
+          "file": "assets/index-CwQ9nSpD.js",
+          "rawBytes": 1075214,
+          "gzipBytes": 291843
+        },
+        {
+          "file": "assets/index-XmOIuZtQ.css",
+          "rawBytes": 1185,
+          "gzipBytes": 550
+        }
+      ],
+      "totalGzipBytes": 292393,
+      "totalGzipKiB": 285.54
+    },
+    "lenis": {
+      "files": [
+        {
+          "file": "assets/index-Ce-5Mn01.js",
+          "rawBytes": 19960,
+          "gzipBytes": 5987
+        },
+        {
+          "file": "assets/index-XmOIuZtQ.css",
+          "rawBytes": 1185,
+          "gzipBytes": 550
+        }
+      ],
+      "totalGzipBytes": 6537,
+      "totalGzipKiB": 6.38
+    },
+    "postprocessing": {
+      "files": [
+        {
+          "file": "assets/EffectComposer-Y7V0LnO1.js",
+          "rawBytes": 4270,
+          "gzipBytes": 1386
+        },
+        {
+          "file": "assets/index-PoZGB3Nh.js",
+          "rawBytes": 517290,
+          "gzipBytes": 128845
+        },
+        {
+          "file": "assets/index-XmOIuZtQ.css",
+          "rawBytes": 1185,
+          "gzipBytes": 550
+        },
+        {
+          "file": "assets/Pass-B4fMNJyl.js",
+          "rawBytes": 683,
+          "gzipBytes": 394
+        },
+        {
+          "file": "assets/RenderPass-D5n8iu-S.js",
+          "rawBytes": 1091,
+          "gzipBytes": 422
+        },
+        {
+          "file": "assets/ShaderPass-2qmVMpAm.js",
+          "rawBytes": 917,
+          "gzipBytes": 441
+        }
+      ],
+      "totalGzipBytes": 132038,
+      "totalGzipKiB": 128.94
+    }
+  },
+  "mainEnhancement": {
+    "files": [
+      {
+        "file": "assets/ocean-scene-6nkg8uIl.js",
+        "rawBytes": 528491,
+        "gzipBytes": 132021
+      }
+    ],
+    "totalGzipBytes": 132021,
+    "withinBudget": true
+  }
+}
