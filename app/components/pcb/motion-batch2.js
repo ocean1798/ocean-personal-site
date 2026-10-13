@@ -180,7 +180,7 @@ function stkStep(now,dt){
     let s=1; if(u<.05){const k=u/.05; s=1+2.70158*Math.pow(k-1,3)+1.70158*Math.pow(k-1,2);} else if(u>.9) s=1-(u-.9)/.1;
     const z=p.sz*s; if(z<=.5)continue; sx.setTransform(DPR,0,0,DPR,p.x*DPR,p.y*DPR); sx.rotate(p.rot); sx.drawImage(p.sp,-z/2,-z/2,z,z); }
   sx.setTransform(1,0,0,1,0,0); if(!parts.length&&!pending.length){sx.clearRect(0,0,sc.width,sc.height);return false;} }
-const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,.ending-parts a,#m2-panel,#pcb-status,[id^="dify-"]';
+const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,.ending-pin,#m2-panel,#pcb-status,[id^="dify-"]';
 on(document,'pointerdown',e=>{ if(!P.st||e.button!==0||e.pointerType!=='mouse')return; const t=e.target;
   if(!(t instanceof Element)||t.closest(BLOCK))return;
   const hero=root.querySelector('.pcb-hero'); if(hero&&e.pageY<hero.getBoundingClientRect().bottom+scrollY)return;   // hero PCB uses hover; keep clicks there inert

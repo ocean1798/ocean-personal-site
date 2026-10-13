@@ -406,19 +406,34 @@ body:has(.pcb)::before{display:none}
 .pcb #m2-panel input[type=range]{width:100px;accent-color:#b8ff3c}.pcb #m2-panel input{accent-color:#b8ff3c}
 .pcb #m2-panel output{min-width:34px;text-align:right;color:var(--cu2)}
 .pcb #m2-panel hr{border:0;border-top:1px solid rgba(127,154,136,.25);margin:7px 0 1px}
-/* ending: whole page as one board */
-.pcb .ending{position:relative;height:300vh;margin:40px 0 0}
-.pcb .ending-pin{position:sticky;top:0;height:100vh;overflow:hidden}
+/* ending: the real board, sections mapped to components */
+.pcb .ending{position:relative;height:320vh;margin:40px 0 0}
+.pcb .ending-pin{position:sticky;top:0;height:100vh;overflow:hidden;
+  background:radial-gradient(60% 70% at 50% 50%,rgba(15,42,29,.85),rgba(4,10,7,.96) 70%,#040a07)}
 .pcb .ending-cv{position:absolute;inset:0;width:100%;height:100%}
 .pcb .ending-parts{position:absolute;inset:0;pointer-events:none}
-.pcb .ending-part{position:absolute;left:0;top:0;border-radius:8px;opacity:0;transition:opacity .2s;outline-offset:4px}
-.pcb .ending-part span{position:absolute;left:50%;bottom:calc(100% + 14px);transform:translate(-50%,4px);opacity:0;transition:opacity .15s,transform .15s;white-space:nowrap;
-  font:11px ui-monospace,monospace;color:#e9f0e6;letter-spacing:.06em;padding:2px 7px;border:1px solid rgba(233,240,230,.35);border-radius:3px;background:rgba(5,12,9,.88);pointer-events:none}
-.pcb .ending-part:hover span,.pcb .ending-part:focus-visible span{opacity:1;transform:translate(-50%,0)}
-.pcb .ending-top{position:absolute;left:0;top:0;opacity:0;text-decoration:none;font:11px ui-monospace,monospace;color:var(--neon);white-space:nowrap;
-  display:flex;align-items:center;gap:8px;margin:-14px 0 0 -14px;padding:0 8px 0 0;height:28px;line-height:28px}
-.pcb .ending-top i{display:inline-block;width:28px;height:28px;border-radius:50%}
+.pcb .ending-part{position:absolute;left:0;top:0;opacity:0;display:grid;grid-template-columns:auto auto;column-gap:10px;align-items:baseline;text-decoration:none;
+  padding:6px 10px;border-left:1px solid rgba(236,242,232,.5);color:#eef2ea;white-space:nowrap;transition:border-color .2s,color .2s,text-shadow .2s}
+.pcb .ending-part.l{border-left:0;border-right:1px solid rgba(236,242,232,.5);text-align:right;justify-items:end}
+.pcb .ending-part b{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--cu2)}
+.pcb .ending-part span{font-size:15px;font-weight:600;letter-spacing:.04em}
+.pcb .ending-part small{grid-column:1 / -1;font:10px ui-monospace,monospace;letter-spacing:.14em;color:var(--mute)}
+.pcb .ending-part.lit b,.pcb .ending-part.hov b{color:var(--neon);text-shadow:0 0 10px rgba(184,255,60,.6)}
+.pcb .ending-part.lit,.pcb .ending-part.hov{border-color:rgba(184,255,60,.7)}
+.pcb .ending-part.hov span{color:var(--neon)}
+.pcb .ending-top{position:absolute;left:0;top:0;opacity:0;text-decoration:none;font:11px ui-monospace,monospace;color:var(--neon);white-space:nowrap;letter-spacing:.08em;
+  display:flex;align-items:center;gap:8px;height:28px}
+.pcb .ending-top i{display:inline-block;width:18px;height:18px;border-radius:50%;border:4px solid #d6a050;background:#040a07;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.pcb .ending.lit .ending-top i{border-color:var(--neon);box-shadow:0 0 12px var(--neon)}
 .pcb .ending-top:hover{color:#fff;text-shadow:0 0 10px var(--neon)}
+.pcb .ending-credit{position:absolute;left:0;top:0;opacity:0;font:10px ui-monospace,monospace;color:var(--mute);letter-spacing:.04em;white-space:nowrap}
+.pcb .ending-credit a{color:var(--cu2)}
 .pcb .ending.static{height:auto}
-.pcb .ending.static .ending-pin{position:relative;height:min(100vh,760px)}
-@media (max-width:700px){.pcb .ending.static .ending-pin{height:auto;aspect-ratio:1000/1100}.pcb .ending-top{flex-direction:row}}
+.pcb .ending.static .ending-pin{position:relative;height:100vh;min-height:640px}
+.pcb .ending.mob .ending-pin{height:auto;min-height:0;padding-bottom:16px}
+.pcb .ending.mob .ending-cv{position:relative;inset:auto;display:block;width:100%;aspect-ratio:180/240;height:auto}
+.pcb .ending.mob .ending-parts{position:static;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;padding:4px 16px;pointer-events:auto}
+.pcb .ending.mob .ending-part,.pcb .ending.mob .ending-top,.pcb .ending.mob .ending-credit{position:static;opacity:1!important;transform:none!important;pointer-events:auto!important}
+.pcb .ending.mob .ending-credit{padding:8px 16px 0;white-space:normal}
+.pcb .ending-pin{width:100vw;margin-left:calc(50% - 50vw)}
+.pcb .ending.mob .ending-part{grid-template-columns:auto 1fr;justify-items:start;text-align:left}

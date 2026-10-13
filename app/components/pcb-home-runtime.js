@@ -54,7 +54,7 @@ export function initPcbHome(root, dataBase) {
       B.nets.push({n,id:D.ni[i],s,v:und(D.v[i],3).map(r=>[r[0]/q,r[1]/q,r[2]/q])});});
     return B;
   }
-  loadBoard().then(B=>{ if(disposed) return; $('pcb-load').classList.add('done'); $('pcb').classList.remove('wait');
+  loadBoard().then(B=>{ if(disposed) return; root.__pcbBoard=B; root.dispatchEvent(new CustomEvent('pcb:board',{detail:B})); $('pcb-load').classList.add('done'); $('pcb').classList.remove('wait');
   const canvas = $('pcb');
   const ctx = canvas.getContext('2d');
   let W=0,H=0,dpr=1,S=1,OX=0,OY=0;
