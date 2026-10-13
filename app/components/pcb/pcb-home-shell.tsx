@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { withBasePath } from "../../lib/site-path";
 import { initPcbHome } from "../pcb-home-runtime.js";
+import { initMotion2 } from "./motion-batch2.js";
 
 /** Fixed PCB canvas background + client behaviour for the home page. */
 export function PcbHomeShell({ children }: { children: ReactNode }) {
@@ -10,7 +11,12 @@ export function PcbHomeShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!rootRef.current) return;
-    return initPcbHome(rootRef.current, withBasePath("/pcb-data"));
+    const stop1 = initPcbHome(rootRef.current, withBasePath("/pcb-data"));
+    const stop2 = initMotion2(rootRef.current);
+    return () => {
+      stop2();
+      stop1();
+    };
   }, []);
 
   return (
