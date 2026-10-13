@@ -93,8 +93,25 @@ export function initPcbHome(root, dataBase) {
       const inside=f=>[[0,0],[W,0],[0,H],[W,H]].every(([X,Y])=>{const [x,y]=Tinv(A[0]+(X-A[0])/f,A[1]+(Y-A[1])/f);return x>=bx0-m&&x<=bx1+m&&y>=by0-m&&y<=by1+m;});
       if(!inside(1)){ let lo=1,hi=1; while(!inside(hi)&&hi<6)hi*=1.25; for(let i=0;i<20;i++){const mid=(lo+hi)/2; if(inside(mid))hi=mid; else lo=mid;}
         S*=1+(hi-1)*P.fillFactor; OX=0;OY=0; const [qx,qy]=T(fx,fy); OX=W*ax-qx; OY=H*ay-qy; } }
-    base=paint(false); lit=paint(true);
+    base=paint(false); lit=paint(true); lastCheck=performance.now();
   }
+  // Offscreen caches can be silently discarded by the browser (2D canvas context loss under
+  // GPU/memory pressure, backgrounded tabs). A lost cache reads back as fully transparent, so
+  // only the vector-drawn highlight survived. Detect it and re-render.
+  let lastCheck=0;
+  const lostCtx=c=>{ if(!c)return true; const g=c.getContext('2d'); if(g.isContextLost&&g.isContextLost())return true;
+    if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr))return true; return false; };
+  function cacheOK(){
+    if(lostCtx(base)||lostCtx(lit))return false;
+    try{ const g=base.getContext('2d',{willReadFrequently:false}); const d=g.getImageData((base.width/2)|0,(base.height/2)|0,1,1).data; if(d[3]<250)return false; }catch(e){}
+    return true; }
+  function ensureCache(now,force){
+    if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)){ netCache.clear(); layout(); return; }
+    if(force||now-lastCheck>2000){ lastCheck=now; if(!cacheOK()){ netCache.clear(); base=paint(false); lit=paint(true); spot=null; } } }
+  const onLost=()=>{ running=false; };
+  const onRestored=()=>{ netCache.clear(); layout(); kick(); };
+  canvas.addEventListener('contextlost',onLost); canvas.addEventListener('contextrestored',onRestored);
+  cleanups.push(()=>{canvas.removeEventListener('contextlost',onLost);canvas.removeEventListener('contextrestored',onRestored);});
   function mk(){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';return [c,g];}
   function paint(bright){
     const [c,g]=mk();
@@ -179,13 +196,15 @@ export function initPcbHome(root, dataBase) {
   // pause when hidden / hero off-screen
   let heroVis=true, running=false;
   const heroEl=root.querySelector('.pcb-hero');
-  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();raf(frame);} }
+  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();if(base)ensureCache(last,true);raf(frame);} }
   if(heroEl) IO(e=>{heroVis=e[0].isIntersecting; kick();},{threshold:0}).observe(heroEl);
   const onVis=()=>kick(); document.addEventListener('visibilitychange',onVis); cleanups.push(()=>document.removeEventListener('visibilitychange',onVis));
   const label=$('net-label');
   let cur=null, curA=0, prev=null, prevA=0; let last=performance.now();
   function frame(now){
     if(!heroVis||document.hidden||disposed){running=false;return;}
+    if(ctx.isContextLost&&ctx.isContextLost()){running=false;return;}
+    ensureCache(now,false);
     const dt=Math.min(.05,(now-last)/1000); last=now;
     const scrollFade=Math.max(.12,1-scrollY/(H*0.9));
     let target;
@@ -198,7 +217,9 @@ export function initPcbHome(root, dataBase) {
     const h=hitNet(sx,sy,44)||cur;
     if(h!==cur){ prev=cur; prevA=curA; cur=h; curA=0; }
     curA=Math.min(1,curA+dt*3.5); prevA=Math.max(0,prevA-dt*3);
-    ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.fillStyle='#050c09'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    // full reset every frame: opaque base, no leftover state from the previous frame
+    ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation='source-over'; ctx.shadowBlur=0; ctx.setLineDash([]); ctx.filter='none';
+    ctx.globalAlpha=1; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#050c09'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.globalAlpha=Math.max(.28,scrollFade); ctx.drawImage(base,0,0);
     // soft spotlight via small temp canvas
     const R=Math.min(W,H)*0.28, Rd=R*dpr, sz=Math.ceil(Rd*2);
