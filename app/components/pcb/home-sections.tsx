@@ -53,7 +53,7 @@ export function WorkSection() {
     <section className="board-sec" id="work">
       <div className="sec-label" data-lit>01 · 本职工作</div>
       <h2>为画电路板的人设计软件。</h2>
-      <p className="sub">
+      <p className="sub" data-power>
         嘉立创 EDA 专业版 · PCB 功能产品经理 ·{" "}
         <a href="https://pro.lceda.cn/editor" target="_blank" rel="noopener">打开编辑器 ↗</a>
       </p>
@@ -103,7 +103,7 @@ export function PluginsSection() {
     <section className="board-sec" id="plugins">
       <div className="sec-label" data-lit>02 · 个人插件</div>
       <h2>把一个具体的麻烦拿掉。</h2>
-      <p className="sub">三个嘉立创 EDA 插件，已上架扩展商店。</p>
+      <p className="sub" data-power>三个嘉立创 EDA 插件，已上架扩展商店。</p>
 
       <article className="component plug" data-comp data-tool="diff-pair">
         <PluginHead

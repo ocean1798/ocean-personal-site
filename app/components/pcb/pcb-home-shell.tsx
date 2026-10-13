@@ -23,6 +23,9 @@ export function PcbHomeShell({ children }: { children: ReactNode }) {
       <div className="hero-keepout" aria-hidden="true"></div>
       <div id="net-label" aria-hidden="true"></div>
       <div className="noise" aria-hidden="true"></div>
+      <div id="pcb-status" aria-hidden="true">
+        X:<b id="sb-x">0000</b> Y:<b id="sb-y">0000</b><i>·</i>NET: <b id="sb-net">—</b><i>·</i><span id="sb-t">--:-- HKT</span>
+      </div>
       <div className="wrap">{children}</div>
     </div>
   );
