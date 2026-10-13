@@ -56,7 +56,13 @@ export function initPcbHome(root, dataBase) {
   }
   loadBoard().then(B=>{ if(disposed) return; $('pcb-load').classList.add('done'); $('pcb').classList.remove('wait');
   const canvas = $('pcb');
-  const ctx = canvas.getContext('2d');
+  const bctx = canvas.getContext('2d');                  // static board layer (redrawn only when its alpha/cache changes)
+  const fxc = document.createElement('canvas'); fxc.id='pcb-fx'; fxc.setAttribute('aria-hidden','true');
+  canvas.after(fxc); cleanups.push(()=>fxc.remove());
+  const ctx = fxc.getContext('2d');                         // dynamic overlay, cleared each frame
+  // the user-tuned look was CSS filter:brightness(1.23) on the canvas; it is now baked into the caches + overlay colours
+  const BRT=1.23, br=c=>{ const v=parseInt(c.slice(1),16), f=x=>Math.min(255,Math.round(x*BRT)); return `rgb(${f(v>>16)},${f(v>>8&255)},${f(v&255)})`; };
+  let boardA=-1, lostFlag=false;
   let W=0,H=0,dpr=1,S=1,OX=0,OY=0;
   let base=null, lit=null, spot=null, sctx=null;            // offscreen layers
   let mx=-1,my=-1,hasPtr=false,lastMove=0,sx=0,sy=0,auto=0,autoNet=0,autoT=0;
@@ -76,8 +82,8 @@ export function initPcbHome(root, dataBase) {
   const Tinv=(X,Y)=>{const u=(X-OX)/S,v=(Y-OY)/S,det=MA*MD-MB*MC;return [(MD*u-MB*v)/det,(-MC*u+MA*v)/det];};
 
   function layout(){
-    dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
-    canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    dpr=Math.min(devicePixelRatio||1,1.5); W=innerWidth; H=innerHeight;
+    canvas.width=fxc.width=Math.round(W*dpr); canvas.height=fxc.height=Math.round(H*dpr); canvas.style.width=fxc.style.width=W+'px'; canvas.style.height=fxc.style.height=H+'px'; boardA=-1;
     const bw=bx1-bx0, bh=by1-by0, mob=W<700;
     const CPU=[88,74.4];                                 // CPU1 (LGA1700) centre, board mm
     MA=1;MB=0;MC=0;MD=1;
@@ -93,26 +99,24 @@ export function initPcbHome(root, dataBase) {
       const inside=f=>[[0,0],[W,0],[0,H],[W,H]].every(([X,Y])=>{const [x,y]=Tinv(A[0]+(X-A[0])/f,A[1]+(Y-A[1])/f);return x>=bx0-m&&x<=bx1+m&&y>=by0-m&&y<=by1+m;});
       if(!inside(1)){ let lo=1,hi=1; while(!inside(hi)&&hi<6)hi*=1.25; for(let i=0;i<20;i++){const mid=(lo+hi)/2; if(inside(mid))hi=mid; else lo=mid;}
         S*=1+(hi-1)*P.fillFactor; OX=0;OY=0; const [qx,qy]=T(fx,fy); OX=W*ax-qx; OY=H*ay-qy; } }
-    base=paint(false); lit=paint(true); lastCheck=performance.now();
+    base=paint(false); lit=paint(true); boardA=-1; lostFlag=false;
   }
   // Offscreen caches can be silently discarded by the browser (2D canvas context loss under
   // GPU/memory pressure, backgrounded tabs). A lost cache reads back as fully transparent, so
   // only the vector-drawn highlight survived. Detect it and re-render.
-  let lastCheck=0;
   const lostCtx=c=>{ if(!c)return true; const g=c.getContext('2d'); if(g.isContextLost&&g.isContextLost())return true;
-    if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr))return true; return false; };
-  function cacheOK(){
-    if(lostCtx(base)||lostCtx(lit))return false;
-    try{ const g=base.getContext('2d',{willReadFrequently:false}); const d=g.getImageData((base.width/2)|0,(base.height/2)|0,1,1).data; if(d[3]<250)return false; }catch(e){}
-    return true; }
-  function ensureCache(now,force){
-    if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)){ netCache.clear(); layout(); return; }
-    if(force||now-lastCheck>2000){ lastCheck=now; if(!cacheOK()){ netCache.clear(); base=paint(false); lit=paint(true); spot=null; } } }
-  const onLost=()=>{ running=false; };
+    return c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr); };
+  function ensureCache(){   // cheap checks only (no pixel readback)
+    if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)||fxc.width!==canvas.width){ netCache.clear(); layout(); return; }
+    if(lostFlag||lostCtx(base)||lostCtx(lit)){ netCache.clear(); base=paint(false); lit=paint(true); spot=null; boardA=-1; lostFlag=false; } }
+  function drawBoard(a){ a=Math.round(a*100)/100; if(a===boardA)return; boardA=a;
+    bctx.setTransform(1,0,0,1,0,0); bctx.globalAlpha=1; bctx.fillStyle=br('#050c09'); bctx.fillRect(0,0,canvas.width,canvas.height);
+    bctx.globalAlpha=a; bctx.drawImage(base,0,0); bctx.globalAlpha=1; }
+  const onLost=()=>{ running=false; lostFlag=true; boardA=-1; };
   const onRestored=()=>{ netCache.clear(); layout(); kick(); };
-  canvas.addEventListener('contextlost',onLost); canvas.addEventListener('contextrestored',onRestored);
+  for(const c of [canvas,fxc]){c.addEventListener('contextlost',onLost); c.addEventListener('contextrestored',onRestored);}
   cleanups.push(()=>{canvas.removeEventListener('contextlost',onLost);canvas.removeEventListener('contextrestored',onRestored);});
-  function mk(){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';return [c,g];}
+  function mk(){const c=document.createElement('canvas');c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';return [c,g];}
   function paint(bright){
     const [c,g]=mk();
     if(!bright){
@@ -143,7 +147,7 @@ export function initPcbHome(root, dataBase) {
     // silkscreen
     g.strokeStyle=bright?'rgba(240,245,235,.85)':'rgba(220,230,220,.28)'; g.lineWidth=Math.max(.6,.13*S);
     g.beginPath(); B.silk.forEach(l=>{g.moveTo(...T(l[0],l[1]));g.lineTo(...T(l[2],l[3]));}); g.stroke();
-    return c;
+    const o=document.createElement('canvas'); o.width=c.width; o.height=c.height; const og=o.getContext('2d'); og.filter=`brightness(${BRT})`; og.drawImage(c,0,0); c.width=c.height=0; return o;
   }
   function hitNet(px,py,rad){ // nearest segment net within rad px
     const [x,y]=Tinv(px,py),r=rad/S; let best=null,bd=r*r;
@@ -196,15 +200,15 @@ export function initPcbHome(root, dataBase) {
   // pause when hidden / hero off-screen
   let heroVis=true, running=false;
   const heroEl=root.querySelector('.pcb-hero');
-  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();if(base)ensureCache(last,true);raf(frame);} }
+  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();if(base)ensureCache();raf(frame);} }
   if(heroEl) IO(e=>{heroVis=e[0].isIntersecting; kick();},{threshold:0}).observe(heroEl);
   const onVis=()=>kick(); document.addEventListener('visibilitychange',onVis); cleanups.push(()=>document.removeEventListener('visibilitychange',onVis));
   const label=$('net-label');
   let cur=null, curA=0, prev=null, prevA=0; let last=performance.now();
   function frame(now){
-    if(!heroVis||document.hidden||disposed){running=false;return;}
-    if(ctx.isContextLost&&ctx.isContextLost()){running=false;return;}
-    ensureCache(now,false);
+    if(!heroVis||document.hidden||disposed){running=false; if(!disposed&&base&&!heroVis){drawBoard(.28); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,fxc.width,fxc.height); label.style.opacity=0;} return;}
+    if((bctx.isContextLost&&bctx.isContextLost())||(ctx.isContextLost&&ctx.isContextLost())){running=false;lostFlag=true;return;}
+    ensureCache();
     const dt=Math.min(.05,(now-last)/1000); last=now;
     const scrollFade=Math.max(.12,1-scrollY/(H*0.9));
     let target;
@@ -219,8 +223,8 @@ export function initPcbHome(root, dataBase) {
     curA=Math.min(1,curA+dt*3.5); prevA=Math.max(0,prevA-dt*3);
     // full reset every frame: opaque base, no leftover state from the previous frame
     ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation='source-over'; ctx.shadowBlur=0; ctx.setLineDash([]); ctx.filter='none';
-    ctx.globalAlpha=1; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#050c09'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.globalAlpha=Math.max(.28,scrollFade); ctx.drawImage(base,0,0);
+    ctx.globalAlpha=1; ctx.clearRect(0,0,fxc.width,fxc.height);
+    drawBoard(Math.max(.28,scrollFade));
     // soft spotlight via small temp canvas
     const R=Math.min(W,H)*0.28, Rd=R*dpr, sz=Math.ceil(Rd*2);
     if(!spot||spot.width!==sz){spot=document.createElement('canvas');spot.width=spot.height=sz;sctx=spot.getContext('2d');}
@@ -235,17 +239,17 @@ export function initPcbHome(root, dataBase) {
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineCap='round'; ctx.lineJoin='round';
     for(const [n,a] of [[prev,prevA],[cur,curA]]){ if(!n||a<=0)continue; const {p,w}=netCanvas(n);
       ctx.globalAlpha=a*scrollFade;
-      ctx.shadowColor='#b8ff3c'; ctx.shadowBlur=14; ctx.strokeStyle='rgba(184,255,60,.35)'; ctx.lineWidth=w+5; ctx.stroke(p);
-      ctx.shadowBlur=0; ctx.strokeStyle='#d9ff7a'; ctx.lineWidth=w+0.6; ctx.stroke(p);
+      ctx.shadowColor='#e2ff4a'; ctx.shadowBlur=14; ctx.strokeStyle='rgba(226,255,74,.35)'; ctx.lineWidth=w+5; ctx.stroke(p);
+      ctx.shadowBlur=0; ctx.strokeStyle='#ffff96'; ctx.lineWidth=w+0.6; ctx.stroke(p);
       // travelling pulse
       ctx.setLineDash([6,40]); ctx.lineDashOffset=-now*0.06; ctx.strokeStyle='#ffffff'; ctx.lineWidth=Math.max(1,w*.6); ctx.stroke(p); ctx.setLineDash([]);
-      n.v.forEach(v=>{ctx.fillStyle='#b8ff3c';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(2,v[2]*S/2),0,7);ctx.fill();ctx.fillStyle='#030806';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(1,v[2]*S/4),0,7);ctx.fill();});
+      n.v.forEach(v=>{ctx.fillStyle='#e2ff4a';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(2,v[2]*S/2),0,7);ctx.fill();ctx.fillStyle='#040a07';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(1,v[2]*S/4),0,7);ctx.fill();});
     }
     ctx.globalAlpha=1;
     const userHover=hasPtr&&now-lastMove<2600&&cur&&curA>.2;
     drawMotion(dt,now,userHover?cur:null,scrollFade);
     // cursor reticle
-    ctx.strokeStyle='rgba(184,255,60,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx,sy,10,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(226,255,74,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx,sy,10,0,7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx-16,sy);ctx.lineTo(sx-6,sy);ctx.moveTo(sx+6,sy);ctx.lineTo(sx+16,sy);ctx.moveTo(sx,sy-16);ctx.lineTo(sx,sy-6);ctx.moveTo(sx,sy+6);ctx.lineTo(sx,sy+16);ctx.stroke();
     if(cur && scrollFade>.3){ label.style.opacity=1; label.style.transform=`translate(${Math.min(W-220,sx+18)}px,${sy-34}px)`;
       label.textContent=(cur.n||'net').replace(/^\//,'').split('/').pop(); }
@@ -256,8 +260,8 @@ export function initPcbHome(root, dataBase) {
     // 1) pad trail (faintest): copper squares, exponential fade
     for(let i=trail.length-1;i>=0;i--){const t=trail[i]; const a=Math.exp(-(now-t.t)/420)*Math.pow(.86,trail.length-1-i);
       if(a<.02)continue; const s=GRID*.52; ctx.globalAlpha=a*fade;
-      ctx.fillStyle='rgba(224,150,70,.42)'; ctx.fillRect(t.x-s/2,t.y-s/2,s,s);
-      ctx.strokeStyle='rgba(246,192,106,.35)'; ctx.lineWidth=1; ctx.strokeRect(t.x-s/2+.5,t.y-s/2+.5,s-1,s-1); }
+      ctx.fillStyle='rgba(255,184,86,.42)'; ctx.fillRect(t.x-s/2,t.y-s/2,s,s);
+      ctx.strokeStyle='rgba(255,236,130,.35)'; ctx.lineWidth=1; ctx.strokeRect(t.x-s/2+.5,t.y-s/2+.5,s-1,s-1); }
     // 2) signal pulses (between trail and highlight)
     for(const p of pulses){
       if(p.net!==net||!p.P){ spawn(p,net); p.delay=net?Math.random()*.25:p.delay; }
@@ -269,15 +273,15 @@ export function initPcbHome(root, dataBase) {
       const tailMM=70/S, N=12; ctx.lineCap='round';
       let prevPt=at(p.d);
       for(let k=1;k<=N;k++){ const d=p.d-tailMM*k/N; if(d<0)break; const q=at(d);
-        ctx.globalAlpha=fade*.62*(1-k/N)**1.6; ctx.strokeStyle='#b8ff3c'; ctx.lineWidth=3*(1-k/(N*1.4));
+        ctx.globalAlpha=fade*.62*(1-k/N)**1.6; ctx.strokeStyle='#e2ff4a'; ctx.lineWidth=3*(1-k/(N*1.4));
         ctx.beginPath(); ctx.moveTo(prevPt[0],prevPt[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); prevPt=q; }
-      const h=at(p.d); ctx.globalAlpha=fade*.32; ctx.fillStyle='#b8ff3c'; ctx.beginPath(); ctx.arc(h[0],h[1],7,0,7); ctx.fill();
-      ctx.globalAlpha=fade*.82; ctx.fillStyle='#d4ff80'; ctx.beginPath(); ctx.arc(h[0],h[1],2.7,0,7); ctx.fill();
+      const h=at(p.d); ctx.globalAlpha=fade*.32; ctx.fillStyle='#e2ff4a'; ctx.beginPath(); ctx.arc(h[0],h[1],7,0,7); ctx.fill();
+      ctx.globalAlpha=fade*.82; ctx.fillStyle='#ffff9d'; ctx.beginPath(); ctx.arc(h[0],h[1],2.7,0,7); ctx.fill();
     }
     // 3) pad flash at arrival
     for(let i=flashes.length-1;i>=0;i--){const f=flashes[i], u=(now-f.t)/380; if(u>=1){flashes.splice(i,1);continue;}
-      const r=3+u*7; ctx.globalAlpha=fade*.7*(1-u); ctx.strokeStyle='#b8ff3c'; ctx.lineWidth=1.4; ctx.strokeRect(f.x-r,f.y-r,r*2,r*2);
-      ctx.globalAlpha=fade*.5*(1-u); ctx.fillStyle='#d4ff80'; ctx.fillRect(f.x-2.5,f.y-2.5,5,5); }
+      const r=3+u*7; ctx.globalAlpha=fade*.7*(1-u); ctx.strokeStyle='#e2ff4a'; ctx.lineWidth=1.4; ctx.strokeRect(f.x-r,f.y-r,r*2,r*2);
+      ctx.globalAlpha=fade*.5*(1-u); ctx.fillStyle='#ffff9d'; ctx.fillRect(f.x-2.5,f.y-2.5,5,5); }
     ctx.globalAlpha=1;
     setNet(net?(net.n||'net').replace(/^\//,'').split('/').pop():'\u2014');
   }
@@ -289,7 +293,7 @@ export function initPcbHome(root, dataBase) {
   on('pointermove',e=>{hasPtr=e.pointerType==='mouse'||hasPtr;mx=e.clientX;my=e.clientY;lastMove=performance.now();if(e.pointerType!=='mouse'){hasPtr=true;}},{passive:true});
   on('resize',()=>{netCache.clear();layout();});
   layout(); sx=W*.7; sy=H*.4;
-  if(reduce){ ctx.drawImage(base,0,0); } else kick();
+  if(reduce){ drawBoard(1); } else kick();
   }).catch(e=>{if(disposed)return;const l=$('pcb-load');l.textContent='电路板数据加载失败';console.warn(e);});
 
   /* ===== Motion batch 1: title scramble + text power-on (one shared on-demand rAF) ===== */
@@ -368,7 +372,8 @@ export function initPcbHome(root, dataBase) {
   (()=>{const c=$('scope'); if(!c)return; const g=c.getContext('2d'); let w=0,hh=0,vis=false;
     const fit=()=>{const r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);w=r.width;hh=r.height;c.width=w*d;c.height=hh*d;g.setTransform(d,0,0,d,0,0);};
     fit(); on('resize',fit);
-    IO(e=>{vis=e[0].isIntersecting;},{threshold:0}).observe(c);
+    let sOn=false; const sKick=()=>{ if(!sOn&&vis&&!reduce&&!document.hidden&&!disposed){sOn=true;raf(draw);} };
+    IO(e=>{vis=e[0].isIntersecting; sKick();},{threshold:0}).observe(c); document.addEventListener('visibilitychange',sKick); cleanups.push(()=>document.removeEventListener('visibilitychange',sKick));
     const N=48, bars=new Array(N).fill(0);
     function draw(t){ if(vis||reduce){ t=reduce?2000:t; g.clearRect(0,0,w,hh);
       g.strokeStyle='rgba(184,255,60,.08)';g.lineWidth=1;g.beginPath();
@@ -381,8 +386,8 @@ export function initPcbHome(root, dataBase) {
       g.save(); g.shadowColor='#b8ff3c'; g.shadowBlur=10; g.strokeStyle='#c8ff5a'; g.lineWidth=1.6; g.beginPath();
       for(let x=0;x<=w;x+=2){ const u=x/w; const y=hh*.42+Math.sin(u*18+t*.004)*hh*.16*Math.sin(u*3.1+t*.0011)+Math.sin(u*47-t*.009)*hh*.04;
         x?g.lineTo(x,y):g.moveTo(x,y);} g.stroke(); g.restore(); }
-      if(!reduce) raf(draw); }
-    raf(draw);})();
+      if(!reduce&&vis&&!document.hidden&&!disposed) raf(draw); else sOn=false; }   // scope loop only runs while visible
+    if(reduce) raf(draw); else sKick();})();
 
   /* ===== Diff pair demo ===== */
   const netsEl = $('nets');

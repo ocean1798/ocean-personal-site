@@ -24,7 +24,7 @@ body:has(.pcb)::before{display:none}
   line-height:1.65;
   overflow-x:clip;}
 .pcb.reduced *{animation:none!important;transition:none!important}
-.pcb canvas#pcb{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.pcb canvas#pcb,.pcb canvas#pcb-fx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 .pcb .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(ellipse at 50% 30%,transparent 0%,rgba(0,0,0,.35) 70%,rgba(0,0,0,.55) 100%);}
 .pcb .hero-keepout{position:fixed;inset:0;z-index:1;pointer-events:none;
@@ -352,7 +352,7 @@ body:has(.pcb)::before{display:none}
 @media(max-width:900px){.pcb .hero-keepout{background:linear-gradient(180deg,rgba(4,10,7,.55),rgba(4,10,7,.85) 60%)}}
 /* hero tuning (hero-tuner.html): overlay opacity/width, board brightness */
 .pcb{--ov-a:.54;--ov-w:.75}
-.pcb canvas#pcb{filter:brightness(1.23)}
+/* brightness(1.23) is baked into the canvas colours (perf: no full-screen CSS filter) */
 /* hero identity block */
 .pcb .id-row{display:flex;align-items:center;gap:clamp(16px,2vw,28px)}
 .pcb .avatar{width:clamp(84px,8vw,132px);height:auto;aspect-ratio:1;border-radius:14px;image-rendering:pixelated;border:1px solid rgba(184,255,60,.45);box-shadow:0 0 0 4px rgba(5,12,9,.6),0 0 30px rgba(184,255,60,.18);background:#0b1a12}
@@ -409,7 +409,8 @@ body:has(.pcb)::before{display:none}
 
 /* background parallax (below the hero) */
 .pcb #bgp{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0;contain:strict}
-.pcb #bgp .bgp-l{position:absolute;left:0;right:0;top:0;background-repeat:repeat;will-change:transform;backface-visibility:hidden}
+.pcb #bgp .bgp-l{position:absolute;left:0;right:0;top:0;background-repeat:repeat;backface-visibility:hidden}
+.pcb #bgp.scrolling .bgp-l{will-change:transform}
 .pcb #bgp .bgp-def,.pcb #bgp .bgp-dense,.pcb #bgp .bgp-diff,.pcb #bgp .bgp-wave,.pcb #bgp .bgp-sparse{opacity:0;transition:opacity .35s linear,visibility .35s}
 .pcb .ph-frame img{translate:0 var(--plx,0px);scale:1.12}
 .pcb .m2-shot{overflow:hidden;border-radius:14px}
