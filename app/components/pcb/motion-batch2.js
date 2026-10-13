@@ -3,6 +3,8 @@
 // Tuning panel only with ?tune in the URL.
 
 /** @param {HTMLElement} root .pcb wrapper  @returns {() => void} cleanup */
+import { initBgParallax } from './bg-parallax.js';
+
 export function initMotion2(root){
 const cleanups=[]; let disposed=false;
 const on=(t,type,fn,o)=>{t.addEventListener(type,fn,o);cleanups.push(()=>t.removeEventListener(type,fn,o));};
@@ -198,5 +200,6 @@ if(new URLSearchParams(location.search).has('tune')){
     else { el.value=P[k]; out.textContent=el.value; el.addEventListener('input',()=>{P[k]=+el.value; out.textContent=el.value;}); } });
 }
 window.__m2spray=spray;
+cleanups.push(initBgParallax(root,{run,RM}));
 return ()=>{ disposed=true; cleanups.forEach(f=>f()); delete window.__m2spray; };
 }
