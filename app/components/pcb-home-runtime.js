@@ -7,11 +7,13 @@
  * @param {string} dataBase   URL prefix of the pcb-data folder (base path aware)
  * @returns {() => void} cleanup
  */
+import { S as FB, once as fbOnce } from './pcb/frame-bus.js';
+
 export function initPcbHome(root, dataBase) {
   let disposed = false;
   const cleanups = [];
   const $ = (id) => document.getElementById(id);
-  const raf = (cb) => (disposed ? 0 : requestAnimationFrame(cb));
+  const raf = (cb) => { if(!disposed) fbOnce(cb); };   // all loops share the single frame-bus rAF
   const on = (type, fn, opts) => { window.addEventListener(type, fn, opts); cleanups.push(() => window.removeEventListener(type, fn, opts)); };
   const IO = (cb, opts) => { const o = new IntersectionObserver(cb, opts); cleanups.push(() => o.disconnect()); return o; };
 
@@ -58,7 +60,9 @@ export function initPcbHome(root, dataBase) {
   const canvas = $('pcb');
   const bctx = canvas.getContext('2d');                  // static board layer (redrawn only when its alpha/cache changes)
   const fxc = document.createElement('canvas'); fxc.id='pcb-fx'; fxc.setAttribute('aria-hidden','true');
-  canvas.after(fxc); cleanups.push(()=>fxc.remove());
+  // stage wrapper: opaque board backdrop; scroll fade is CSS opacity on the stage/board, never a canvas redraw
+  const stage = document.createElement('div'); stage.id='pcb-stage'; stage.setAttribute('aria-hidden','true');
+  canvas.before(stage); stage.append(canvas, fxc); cleanups.push(()=>{ stage.before(canvas); stage.remove(); });
   const ctx = fxc.getContext('2d');                         // dynamic overlay, cleared each frame
   // the user-tuned look was CSS filter:brightness(1.23) on the canvas; it is now baked into the caches + overlay colours
   const BRT=1.23, br=c=>{ const v=parseInt(c.slice(1),16), f=x=>Math.min(255,Math.round(x*BRT)); return `rgb(${f(v>>16)},${f(v>>8&255)},${f(v&255)})`; };
@@ -109,6 +113,7 @@ export function initPcbHome(root, dataBase) {
   function ensureCache(){   // cheap checks only (no pixel readback)
     if(canvas.width!==Math.round(W*dpr)||canvas.height!==Math.round(H*dpr)||fxc.width!==canvas.width){ netCache.clear(); layout(); return; }
     if(lostFlag||lostCtx(base)||lostCtx(lit)){ netCache.clear(); base=paint(false); lit=paint(true); spot=null; boardA=-1; lostFlag=false; } }
+  let fadeA=-1; function setFade(a){ a=Math.round(a*100)/100; if(a!==fadeA){ fadeA=a; canvas.style.opacity=a; } }
   function drawBoard(a){ a=Math.round(a*100)/100; if(a===boardA)return; boardA=a;
     bctx.setTransform(1,0,0,1,0,0); bctx.globalAlpha=1; bctx.fillStyle=br('#050c09'); bctx.fillRect(0,0,canvas.width,canvas.height);
     bctx.globalAlpha=a; bctx.drawImage(base,0,0); bctx.globalAlpha=1; }
@@ -200,17 +205,18 @@ export function initPcbHome(root, dataBase) {
   // pause when hidden / hero off-screen
   let heroVis=true, running=false;
   const heroEl=root.querySelector('.pcb-hero');
-  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();if(base)ensureCache();raf(frame);} }
+  function kick(){ if(!running&&!reduce&&heroVis&&scrollY<H*.98&&!document.hidden&&!disposed){running=true;last=performance.now();if(base)ensureCache();raf(frame);} }
   if(heroEl) IO(e=>{heroVis=e[0].isIntersecting; kick();},{threshold:0}).observe(heroEl);
   const onVis=()=>kick(); document.addEventListener('visibilitychange',onVis); cleanups.push(()=>document.removeEventListener('visibilitychange',onVis));
   const label=$('net-label');
   let cur=null, curA=0, prev=null, prevA=0; let last=performance.now();
   function frame(now){
-    if(!heroVis||document.hidden||disposed){running=false; if(!disposed&&base&&!heroVis){drawBoard(.28); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,fxc.width,fxc.height); label.style.opacity=0;} return;}
+    const sy0=FB.y;
+    if(!heroVis||sy0>=H*.98||document.hidden||disposed){running=false; if(!disposed&&base){ setFade(.28); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,fxc.width,fxc.height); label.style.opacity=0;} return;}   // stop promptly once the hero has scrolled away
     if((bctx.isContextLost&&bctx.isContextLost())||(ctx.isContextLost&&ctx.isContextLost())){running=false;lostFlag=true;return;}
     ensureCache();
     const dt=Math.min(.05,(now-last)/1000); last=now;
-    const scrollFade=Math.max(.12,1-scrollY/(H*0.9));
+    const scrollFade=Math.max(.12,1-sy0/(H*0.9));
     let target;
     if(hasPtr && now-lastMove<2600){ target=[mx,my]; }
     else { // idle sweep across named nets
@@ -224,7 +230,7 @@ export function initPcbHome(root, dataBase) {
     // full reset every frame: opaque base, no leftover state from the previous frame
     ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation='source-over'; ctx.shadowBlur=0; ctx.setLineDash([]); ctx.filter='none';
     ctx.globalAlpha=1; ctx.clearRect(0,0,fxc.width,fxc.height);
-    drawBoard(Math.max(.28,scrollFade));
+    drawBoard(1); setFade(Math.max(.28,scrollFade));
     // soft spotlight via small temp canvas
     const R=Math.min(W,H)*0.28, Rd=R*dpr, sz=Math.ceil(Rd*2);
     if(!spot||spot.width!==sz){spot=document.createElement('canvas');spot.width=spot.height=sz;sctx=spot.getContext('2d');}
@@ -291,9 +297,11 @@ export function initPcbHome(root, dataBase) {
         if(!l||l.x!==gx||l.y!==gy){ trail.push({x:gx,y:gy,t:performance.now()}); if(trail.length>TRAIL_N)trail.shift(); } } }
   },{passive:true});
   on('pointermove',e=>{hasPtr=e.pointerType==='mouse'||hasPtr;mx=e.clientX;my=e.clientY;lastMove=performance.now();if(e.pointerType!=='mouse'){hasPtr=true;}},{passive:true});
-  on('resize',()=>{netCache.clear();layout();});
+  // ignore height-only jitter (mobile URL bar while scrolling): no canvas resize/redraw mid-scroll
+  on('resize',()=>{ if(innerWidth===W&&Math.abs(innerHeight-H)<160)return; netCache.clear();layout();});
+  on('scroll',()=>{ if(!running&&scrollY<H*.98) kick(); },{passive:true});
   layout(); sx=W*.7; sy=H*.4;
-  if(reduce){ drawBoard(1); } else kick();
+  if(reduce){ drawBoard(1); setFade(1); } else kick();
   }).catch(e=>{if(disposed)return;const l=$('pcb-load');l.textContent='电路板数据加载失败';console.warn(e);});
 
   /* ===== Motion batch 1: title scramble + text power-on (one shared on-demand rAF) ===== */
@@ -301,7 +309,7 @@ export function initPcbHome(root, dataBase) {
   const LD=40;                                   // letterDelay ms
   const scrJobs=[], powerEls=[];
   let uiQueued=false;
-  const uiKick=()=>{ if(!uiQueued&&!disposed){uiQueued=true;requestAnimationFrame(uiTick);} };
+  const uiKick=()=>{ if(!uiQueued&&!disposed){uiQueued=true;raf(uiTick);} };
   function wrapChars(el,cls){ // split text nodes into per-char spans, copy stays identical
     const out=[], w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), nodes=[]; let n;
     while((n=w.nextNode())) nodes.push(n);
@@ -316,6 +324,7 @@ export function initPcbHome(root, dataBase) {
     const spans=wrapChars(el,'sc'); spans.forEach(s=>s.setAttribute('aria-hidden','true'));
     const pool=spans.map(s=>s.dataset.c);
     scrJobs.push({spans,pool,t0:performance.now(),lastSwap:0}); uiKick(); }
+  let pwDirty=true; function measurePower(){ pwDirty=false; const y=scrollY; powerEls.forEach(P=>{ const r=P.el.getBoundingClientRect(); P.top=r.top+y; P.h=r.height; }); }   // rects cached; refreshed on resize only
   function uiTick(now){
     uiQueued=false; let more=false;
     for(let j=scrJobs.length-1;j>=0;j--){ const J=scrJobs[j], el=now-J.t0, swap=now-J.lastSwap>48; if(swap)J.lastSwap=now; let live=false;
@@ -326,9 +335,10 @@ export function initPcbHome(root, dataBase) {
         else if(s.classList.contains('scr')||s.classList.contains('wait')){ s.classList.remove('scr','wait'); s.textContent=c; } });
       if(live)more=true; else scrJobs.splice(j,1); }
     // scroll-linked power-on: fill dim -> bright per character
-    const vh=innerHeight;
-    powerEls.forEach(P=>{ const r=P.el.getBoundingClientRect(); if(r.bottom<-50||r.top>vh+50)return;
-      const prog=Math.max(0,Math.min(1,(vh*.88-r.top)/(Math.max(r.height,40)+vh*.38))), k=prog*(P.spans.length+6);
+    const vh=FB.vh||innerHeight, y=FB.y;
+    if(pwDirty)measurePower();
+    powerEls.forEach(P=>{ const top=P.top-y, bot=top+P.h; if(bot<-50||top>vh+50)return;
+      const prog=Math.max(0,Math.min(1,(vh*.88-top)/(Math.max(P.h,40)+vh*.38))), k=prog*(P.spans.length+6);
       if(Math.abs(k-P.k)<.01)return; P.k=k;
       P.spans.forEach((s,i)=>{ const v=Math.max(0,Math.min(1,(k-i)/6)); s.style.opacity=(.22+.78*v).toFixed(3); }); });
     if(more)uiKick();
@@ -339,7 +349,7 @@ export function initPcbHome(root, dataBase) {
     heads.forEach(h=>ioS.observe(h));
     const nm=root.querySelector('.pcb-hero .name'); if(nm) setTimeout(()=>startScramble(nm),150);
     root.querySelectorAll('[data-power]').forEach(el=>{ powerEls.push({el,spans:wrapChars(el,'pw'),k:-1}); });
-    if(powerEls.length){ on('scroll',uiKick,{passive:true}); on('resize',uiKick); uiKick(); }
+    if(powerEls.length){ on('scroll',uiKick,{passive:true}); on('resize',()=>{pwDirty=true;uiKick();}); const ro=new ResizeObserver(()=>{pwDirty=true;uiKick();}); ro.observe(document.body); cleanups.push(()=>ro.disconnect()); uiKick(); }
   }
 
   /* ===== Scroll assembly ===== */

@@ -4,6 +4,7 @@
 
 /** @param {HTMLElement} root .pcb wrapper  @returns {() => void} cleanup */
 import { initBgParallax } from './bg-parallax.js';
+import { S as FB, run as fbRun } from './frame-bus.js';
 
 export function initMotion2(root){
 const cleanups=[]; let disposed=false;
@@ -14,28 +15,22 @@ const DPR=Math.min(devicePixelRatio||1,2);
 const P={ss:!RM&&!TOUCH,lerp:.1,tr:true,dz:!RM,dur:500,pitch:14,st:!RM,cnt:20,g:600,pop:760,life:3400,drag:.9,wind:120,sz:44};
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 
-/* shared on-demand rAF */
-const tasks=new Set(); let rafId=0,lastT=0;
-function loop(t){ const dt=Math.min(.05,(t-(lastT||t))/1000); lastT=t; rafId=0; if(disposed)return;
-  for(const f of [...tasks]) if(f(t,dt)===false) tasks.delete(f);
-  if(tasks.size&&!document.hidden) rafId=requestAnimationFrame(loop); else lastT=0; }
-function run(f){ tasks.add(f); if(!rafId&&!document.hidden&&!disposed) rafId=requestAnimationFrame(loop); }
-on(document,'visibilitychange',()=>{ if(!document.hidden&&tasks.size&&!rafId) rafId=requestAnimationFrame(loop); });
-cleanups.push(()=>cancelAnimationFrame(rafId));
+/* shared rAF: the page-wide frame bus (one loop for hero, smooth scroll, parallax, progress, dissolve, stickers) */
+function run(f,first){ if(disposed)return; const g=(t,dt)=>disposed?false:f(t,dt); fbRun(g,first); }
 
 /* 1. lerp smooth scroll */
 let target=scrollY,current=scrollY,smoothing=false;
 const jump=y=>window.scrollTo({top:y,left:0,behavior:'instant'});   // html has scroll-behavior:smooth
-const maxScroll=()=>document.documentElement.scrollHeight-innerHeight;
-function ssStep(){ current+=(target-current)*P.lerp; if(Math.abs(target-current)<.5){current=target;jump(current);smoothing=false;return false;} jump(current); }
-function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!P.ss){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep);} }
+let maxS=0; const measureMax=()=>{maxS=document.documentElement.scrollHeight-innerHeight;}; const maxScroll=()=>maxS||(measureMax(),maxS);
+function ssStep(){ if(!P.ss){smoothing=false;return false;} current+=(target-current)*P.lerp; const done=Math.abs(target-current)<.5; if(done)current=target; const y=Math.round(current*2)/2; if(y!==FB.y){ jump(y); FB.y=y; } if(done){smoothing=false;return false;} }   // write-only; runs first in the frame
+function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!P.ss){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep,true);} }
 function innerScrollable(el,dy){ for(;el&&el!==document.body&&el!==document.documentElement;el=el.parentElement){
   const s=getComputedStyle(el); if(/(auto|scroll)/.test(s.overflowY)&&el.scrollHeight>el.clientHeight+1){ if((dy>0&&el.scrollTop+el.clientHeight<el.scrollHeight-1)||(dy<0&&el.scrollTop>0))return true; } } return false; }
 on(window,'wheel',e=>{ if(!P.ss||e.ctrlKey||e.defaultPrevented)return;
   const d=e.deltaMode===1?e.deltaY*40:e.deltaMode===2?e.deltaY*innerHeight:e.deltaY;
   if(!d||Math.abs(e.deltaX)>Math.abs(e.deltaY)||innerScrollable(e.target,d))return;
   e.preventDefault(); if(!smoothing)current=target=scrollY; scrollToY(target+d); },{passive:false});
-on(window,'scroll',()=>{ if(!smoothing)target=current=scrollY; onScroll(); },{passive:true});
+let trQ=false; on(window,'scroll',()=>{ if(!smoothing)target=current=scrollY; if(!trQ){trQ=true; run(()=>{trQ=false; onScroll(); return false;});} },{passive:true});
 on(window,'keydown',e=>{ if(!P.ss||e.altKey||e.ctrlKey||e.metaKey)return; const a=document.activeElement;
   if(a&&(/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY|IFRAME/.test(a.tagName)||a.isContentEditable||a.closest('[role=button]')))return;
   const m={PageDown:innerHeight*.9,PageUp:-innerHeight*.9,ArrowDown:90,ArrowUp:-90,' ':e.shiftKey?-innerHeight*.9:innerHeight*.9};
@@ -54,8 +49,8 @@ const vias=secs.map(s=>{ const lab=s.id==='top'?'00 · 首页':((s.querySelector
   const b=document.createElement('button'); b.type='button'; b.className='via'; b.setAttribute('aria-label','跳到 '+lab); const sp=document.createElement('span'); sp.textContent=lab; b.appendChild(sp);
   b.addEventListener('click',()=>scrollToY(s.getBoundingClientRect().top+scrollY-70)); trace.appendChild(b); return [b,s]; });
 let anchors=[];
-function layoutTrace(){ const M=Math.max(1,maxScroll()); anchors=vias.map(([b,s])=>{ const y=clamp((s.getBoundingClientRect().top+scrollY-70)/M,0,1); b.style.top=(y*100)+'%'; return y; }); onScroll(); }
-function onScroll(){ if(!P.tr)return; const p=clamp(scrollY/Math.max(1,maxScroll()),0,1); tfill.style.transform='scaleY('+p.toFixed(4)+')'; vias.forEach(([b],i)=>b.classList.toggle('on',p>=anchors[i]-.002)); }
+function layoutTrace(){ measureMax(); const M=Math.max(1,maxScroll()); anchors=vias.map(([b,s])=>{ const y=clamp((s.getBoundingClientRect().top+scrollY-70)/M,0,1); b.style.top=(y*100)+'%'; return y; }); onScroll(); }
+function onScroll(){ if(!P.tr)return; const p=clamp((FB.y||scrollY)/Math.max(1,maxScroll()),0,1); tfill.style.transform='scaleY('+p.toFixed(4)+')'; vias.forEach(([b],i)=>b.classList.toggle('on',p>=anchors[i]-.002)); }
 on(window,'resize',layoutTrace); on(window,'load',layoutTrace); layoutTrace();
 const ro=new ResizeObserver(()=>layoutTrace()); ro.observe(document.body); cleanups.push(()=>ro.disconnect());
 
@@ -180,7 +175,7 @@ function stkStep(now,dt){
     let s=1; if(u<.05){const k=u/.05; s=1+2.70158*Math.pow(k-1,3)+1.70158*Math.pow(k-1,2);} else if(u>.9) s=1-(u-.9)/.1;
     const z=p.sz*s; if(z<=.5)continue; sx.setTransform(DPR,0,0,DPR,p.x*DPR,p.y*DPR); sx.rotate(p.rot); sx.drawImage(p.sp,-z/2,-z/2,z,z); }
   sx.setTransform(1,0,0,1,0,0); if(!parts.length&&!pending.length){sx.clearRect(0,0,sc.width,sc.height);return false;} }
-const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,#m2-panel,#pcb-status,[id^="dify-"]';
+const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,#m2-panel,#pcb-status';
 on(document,'pointerdown',e=>{ if(!P.st||e.button!==0||e.pointerType!=='mouse')return; const t=e.target;
   if(!(t instanceof Element)||t.closest(BLOCK))return;
   const hero=root.querySelector('.pcb-hero'); if(hero&&e.pageY<hero.getBoundingClientRect().bottom+scrollY)return;   // hero PCB uses hover; keep clicks there inert
@@ -196,7 +191,7 @@ if(new URLSearchParams(location.search).has('tune')){
    +'<hr>'+ck('st','点击贴纸')+row('cnt','数量',1,60,1)+row('g','重力',200,3000,50)+row('pop','上抛',300,1500,10)+row('life','寿命 ms',1000,6000,100)+row('drag','空气阻力',0,3,.05)+row('wind','风',0,400,10)+row('sz','尺寸 px',24,80,1);
   root.appendChild(pn); cleanups.push(()=>pn.remove());
   pn.querySelectorAll('input').forEach(el=>{ const k=el.dataset.k, out=el.nextElementSibling;
-    if(el.type==='checkbox'){ el.checked=P[k]; el.addEventListener('change',()=>{P[k]=el.checked; trace.style.display=P.tr?'':'none'; if(P.tr)layoutTrace(); if(!P.ss){smoothing=false;tasks.delete(ssStep);} }); }
+    if(el.type==='checkbox'){ el.checked=P[k]; el.addEventListener('change',()=>{P[k]=el.checked; trace.style.display=P.tr?'':'none'; if(P.tr)layoutTrace(); if(!P.ss){smoothing=false;} }); }
     else { el.value=P[k]; out.textContent=el.value; el.addEventListener('input',()=>{P[k]=+el.value; out.textContent=el.value;}); } });
 }
 window.__m2spray=spray;

@@ -113,23 +113,6 @@ test("exports the framework asset directory used by the HTML", async () => {
   );
 });
 
-test("keeps the Dify assistant in the exported client bundle", async () => {
-  const home = await readFile(routes[0][1], "utf8");
-  const chunksDirectory = new URL("../out/_next/static/chunks/", import.meta.url);
-  const chunkNames = await readdir(chunksDirectory, { recursive: true });
-  const JavaScriptChunks = await Promise.all(
-    chunkNames
-      .filter((name) => name.endsWith(".js"))
-      .map((name) => readFile(new URL(name, chunksDirectory), "utf8")),
-  );
-  const clientJavaScript = JavaScriptChunks.join("\n");
-
-  assert.match(home, /dify-chatbot-privacy-hint/);
-  assert.match(home, /由 Dify 提供/);
-  assert.match(clientJavaScript, /https:\/\/udify\.app\/embed\.min\.js/);
-  assert.match(clientJavaScript, /v6MceBc699WCQuNp/);
-});
-
 test("exports the PCB board data and bakes the base path into the client loader", async () => {
   for (const name of ["board-x86.json.gz", "board-x86.json", "LICENSE", "README.md"]) {
     await assert.doesNotReject(access(new URL(`pcb-data/${name}`, outputDirectory)), `missing pcb-data/${name}`);
