@@ -353,3 +353,23 @@ body:has(.pcb)::before{display:none}
 /* hero tuning (hero-tuner.html): overlay opacity/width, board brightness */
 .pcb{--ov-a:.54;--ov-w:.75}
 .pcb canvas#pcb{filter:brightness(1.23)}
+/* hero identity block */
+.pcb .id-row{display:flex;align-items:center;gap:clamp(16px,2vw,28px)}
+.pcb .avatar{width:clamp(84px,8vw,132px);height:auto;aspect-ratio:1;border-radius:14px;image-rendering:pixelated;border:1px solid rgba(184,255,60,.45);box-shadow:0 0 0 4px rgba(5,12,9,.6),0 0 30px rgba(184,255,60,.18);background:#0b1a12}
+.pcb .name{font-size:clamp(52px,7.4vw,120px);font-weight:900;line-height:1;letter-spacing:-.02em;color:var(--silk);text-shadow:0 2px 30px rgba(0,0,0,.6);display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap}
+.pcb .name .latin{font:500 clamp(14px,1.2vw,20px) ui-monospace,monospace;letter-spacing:.2em;color:var(--cu2);text-transform:uppercase}
+.pcb .id-line{margin-top:12px;font-size:clamp(16px,1.35vw,20px);color:var(--silk);opacity:.9}
+.pcb .pcb-hero .silk{margin:clamp(28px,3.4vw,44px) 0 6px;font-size:clamp(20px,2vw,30px);font-weight:700;line-height:1.5;letter-spacing:.02em}
+.pcb .pcb-hero .silk .sl{display:inline}
+.pcb .id-sub{color:var(--mute);font-size:15px}
+.pcb .pcb-hero .cta{align-items:center;margin-top:28px}
+.pcb .icon-link{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:10px;color:var(--mute);border:1px solid rgba(127,154,136,.3)}
+.pcb .icon-link:hover{color:var(--neon);border-color:var(--neon)}
+.pcb .board-credit{position:absolute;right:0;bottom:28px;font:12px ui-monospace,monospace;color:var(--mute)}
+.pcb .board-credit:hover{color:var(--neon)}
+.pcb .brand-latin{margin-left:8px;color:var(--mute);font-size:11px;letter-spacing:.14em}
+.pcb .pcb-footer #board-credit a{color:var(--cu2)}
+@media(max-width:900px){.pcb .pcb-hero .silk{font-size:clamp(18px,5.2vw,24px)}.pcb .board-credit{position:static;margin-top:28px;display:inline-block}}
+.pcb .pcb-nav .brand{white-space:nowrap;flex-shrink:0}
+.pcb .board-credit{bottom:auto;top:calc(100vh - 250px);padding:4px 8px;border-radius:6px;background:rgba(5,12,9,.6);border:1px solid rgba(127,154,136,.25)}
+@media(max-width:900px){.pcb .brand-latin{display:none}}

@@ -7,46 +7,43 @@ const HEADLINE = ["让噪声化为秩序，", "让想法长出形状。"];
 export function Hero() {
   return (
     <header className="pcb-hero" id="top">
-      <span className="chip-tag">
-        ● <span style={{ whiteSpace: "nowrap" }}>Ocean · 产品经理</span> ·{" "}
-        <span style={{ whiteSpace: "nowrap" }}>嘉立创 EDA 专业版 · 深圳</span>
-      </span>
-      <h1 className="silk" id="silk" aria-label={HEADLINE.join("")}>
+      <div className="id-row">
+        <img
+          className="avatar"
+          src={withBasePath("/images/ocean-pixel-portrait-320.png")}
+          alt="海洋湃的像素头像"
+          width={160}
+          height={160}
+        />
+        <div>
+          <h1 className="name">
+            海洋湃<span className="latin">Ocean</span>
+          </h1>
+          <p className="id-line">嘉立创 EDA 产品经理 · 深圳</p>
+        </div>
+      </div>
+      <p className="silk" id="silk" aria-label={HEADLINE.join("")}>
         {HEADLINE.map((line) => (
           <span className="sl" key={line} aria-hidden="true">
             {[...line].map((c, i) => (
-              <span
-                className="ch"
-                key={i}
-                style={c === "，" || c === "。" ? { marginRight: "0.08em" } : undefined}
-              >
+              <span className="ch" key={i}>
                 {c}
               </span>
             ))}
           </span>
         ))}
-      </h1>
-      <div className="silk-rule" aria-hidden="true"></div>
-      <p className="hero-lead">
-        嘉立创 EDA 专业版产品经理，做 PCB 功能。
-        <br />
-        业余用 AI 做 EDA 插件。
       </p>
+      <p className="id-sub">业余用 AI 做 EDA 插件。</p>
       <div className="cta">
         <a className="btn btn-cu" href="#plugins">看我的插件</a>
-        <a className="btn btn-ghost" href="https://github.com/ocean1798" target="_blank" rel="noopener">GitHub</a>
         <a className="btn btn-neon" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-      </div>
-      <div className="mouse-hint">
-        移动鼠标 · <span>点亮板上的网络</span>
-      </div>
-      <p className="attrib">
-        背景电路板：
-        <a href="https://oshwhub.com/oshwhub/dian-nao-zhu-ban" target="_blank" rel="noopener">
-          【全网首发】X86电脑主板
+        <a className="icon-link" href="https://github.com/ocean1798" target="_blank" rel="noopener" aria-label="GitHub（新标签页打开）" title="GitHub">
+          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+          </svg>
         </a>
-        （LGA1700 · 4 层）· 作者 OSHWHub 官方 · GPL-3.0 · 由原始 PCB 文件渲染
-      </p>
+      </div>
+      <a className="board-credit" href="#board-credit">背景板 ↗</a>
     </header>
   );
 }
