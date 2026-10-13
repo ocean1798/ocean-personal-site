@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { DifyChatbot } from "./components/dify-chatbot";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +19,6 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body>
         {children}
-        <DifyChatbot />
       </body>
     </html>
   );

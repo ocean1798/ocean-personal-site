@@ -2,6 +2,7 @@
 // Scroll-linked PCB background below the hero: procedural tiles pre-rendered to offscreen canvases,
 // stacked depth layers moved with translate3d only, per-section character crossfaded by scroll position.
 
+import { S as FB } from './frame-bus.js';
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 function rng(seed){ let s=seed>>>0||1; return ()=>((s=Math.imul(s^s>>>15,1|s)+0x6D2B79F5|0, s=(s+Math.imul(s^s>>>7,61|s))^s, ((s^s>>>14)>>>0)/4294967296)); }
 
@@ -48,39 +49,37 @@ const MAKERS={
     g.strokeStyle=SILK+'.08)'; g.lineWidth=1; [[30,30],[490,30],[30,490],[490,490]].forEach(([x,y],i)=>{ const sx=i%2?-1:1, sy=i<2?1:-1; g.beginPath(); g.moveTo(x,y+sy*18); g.lineTo(x,y); g.lineTo(x+sx*18,y); g.stroke(); });
     for(let i=0;i<3;i++){ const x=R()*w,y=R()*h; wrapDraw(w,h,(dx,dy)=>fiducial(g,x+dx,y+dy,.26)); } }),
 };
-const SIZE={grid:[512,512],base:[560,560],glow:[1400,1800],def:[480,480],dense:[480,480],diff:[480,480],wave:[480,240],sparse:[520,520]};
-const LAYERS=[['glow',.1],['grid',.2],['base',.3],['def',.45],['dense',.45],['diff',.45],['wave',.45],['sparse',.45]];
-const CHAR={work:'dense',plugins:'diff',more:'def',tools:'def',music:'wave',photo:'sparse',contact:'def'};
+// Collapsed to 2 layers (perf): one combined grid+traces tile at ~0.25x, one low-res glow tile at ~0.1x.
+const T=512;
+MAKERS.traces=(dpr)=>{ const g0=MAKERS.grid(dpr), b0=MAKERS.base(dpr), d0=MAKERS.def(dpr); return tile(T,T,dpr,(g)=>{ g.drawImage(g0,0,0,T,T); g.drawImage(b0,0,0,T,T); g.globalAlpha=.8; g.drawImage(d0,0,0,T,T); }); };
+const SIZE={traces:[T,T],glow:[1400,1800]};
+const LAYERS=[['glow',.1],['traces',.25]];
 
 export function initBgParallax(root,{run,RM}){
   const cleanups=[]; const on=(t,ty,f,o)=>{t.addEventListener(ty,f,o);cleanups.push(()=>t.removeEventListener(ty,f,o));};
   const mob=matchMedia('(max-width: 700px), (pointer: coarse)').matches;
-  const dpr=Math.min(devicePixelRatio||1,1.5), K=mob?.6:1;   // mobile: reduced intensity + travel
+  const dpr=Math.min(devicePixelRatio||1,1.5), K=mob?.6:1;
   const host=document.createElement('div'); host.id='bgp'; host.setAttribute('aria-hidden','true');
   const anchor=root.querySelector('.vignette'); root.insertBefore(host,anchor||root.firstChild); cleanups.push(()=>host.remove());
-  const els={}; const heroCvs=()=>root.querySelectorAll('canvas#pcb, canvas#pcb-fx');
-  const build=()=>{ LAYERS.forEach(([k,rate])=>{ const c=MAKERS[k](dpr), [tw,th]=SIZE[k]; const d=document.createElement('div'); d.className='bgp-l bgp-'+k;
-      d.style.backgroundImage=`url(${c.toDataURL('image/png')})`; d.style.backgroundSize=`${tw}px ${th}px`; d.style.height=`calc(100% + ${th}px)`; host.appendChild(d); els[k]={d,rate:rate*K,th,op:-1}; }); update(); };
-  const secs=[...root.querySelectorAll('main > section[id]')].filter(s=>CHAR[s.id]);
-  // section images: gentle parallax inside their frame (translate property, so hover scale/transitions stay intact)
-  const imgs=()=>[...root.querySelectorAll('.ph-frame img, .m2-shot')];
-  let lastY=-1;
-  function update(){
-    const y=scrollY, vh=innerHeight;
-    const f=clamp((y-vh*.35)/(vh*.55),0,1); host.style.opacity=(f*(mob?.6:1)).toFixed(3); const hv=f>0?'visible':'hidden'; if(host.style.visibility!==hv) host.style.visibility=hv;   // nothing to composite while under the hero
-    { const o=(1-f*.72).toFixed(3); heroCvs().forEach(c=>{ if(o!==c.style.opacity) c.style.opacity=o; }); }   // let the moving layers lead below the hero
-    if(!RM&&f>0) for(const k in els){ const L=els[k]; const off=(y*L.rate)%L.th; L.d.style.transform=`translate3d(0,${(-off).toFixed(1)}px,0)`; }
-    // per-section character crossfade (by distance of section from viewport centre)
-    const w={def:0,dense:0,diff:0,wave:0,sparse:0}; const mid=vh/2;
-    secs.forEach(s=>{ const r=s.getBoundingClientRect(); const d=r.top>mid?r.top-mid:(r.bottom<mid?mid-r.bottom:0); const wgt=clamp(1-d/(vh*.6),0,1); const key=CHAR[s.id]; w[key]=Math.max(w[key],wgt); });
-    const others=Math.max(w.dense,w.diff,w.wave,w.sparse); w.def=Math.max(w.def,1-others);
-    for(const k of ['def','dense','diff','wave','sparse']){ const L=els[k]; if(!L)continue; const o=+w[k].toFixed(2); if(o!==L.op){L.op=o; L.d.style.opacity=o; L.d.style.visibility=o>0?'visible':'hidden';} }
-    if(!RM) imgs().forEach(el=>{ const r=el.getBoundingClientRect(); if(r.bottom<-40||r.top>vh+40)return; const t=clamp(((r.top+r.height/2)-vh/2)/(vh/2+r.height/2),-1,1);
-      const amp=(el.classList.contains('m2-shot')?14:20)*K; el.style.setProperty('--plx',(-t*amp).toFixed(1)+'px'); });
+  const els=[]; const stage=()=>root.querySelector('#pcb-stage')||root.querySelector('canvas#pcb');
+  // each layer: viewport + one tile of margin, moved by a single translate3d (no page-height textures)
+  const build=()=>{ LAYERS.forEach(([k,rate])=>{ const c=MAKERS[k](k==='glow'?.25:dpr), [tw,th]=SIZE[k]; const d=document.createElement('div'); d.className='bgp-l bgp-'+k;
+      d.style.backgroundImage=`url(${c.toDataURL('image/png')})`; d.style.backgroundSize=`${tw}px ${th}px`; d.style.height=`calc(100% + ${th}px)`; host.appendChild(d); els.push({d,rate:rate*K,th,tx:''}); }); kick(); };
+  // section images: cached page rects, refreshed on resize/layout change only
+  let imgs=[]; const measure=()=>{ const y=scrollY; imgs=[...root.querySelectorAll('.ph-frame img, .m2-shot')].map(el=>{ const r=el.getBoundingClientRect(); return {el,top:r.top+y,h:r.height,amp:(el.classList.contains('m2-shot')?14:20)*K,v:''}; }); };
+  let dirty=true, lastY=-1, hostO='', hostV='', heroO='';
+  function update(y,vh){
+    if(dirty){ dirty=false; measure(); }
+    const f=clamp((y-vh*.35)/(vh*.55),0,1); const ho=(f*(mob?.6:1)).toFixed(3); if(ho!==hostO){ hostO=ho; host.style.opacity=ho; }
+    const hv=f>0?'visible':'hidden'; if(hv!==hostV){ hostV=hv; host.style.visibility=hv; }
+    const st=stage(); const o=(1-f*.72).toFixed(3); if(st&&o!==heroO){ heroO=o; st.style.opacity=o; }
+    if(!RM&&f>0) for(const L of els){ const tx=`translate3d(0,${(-((y*L.rate)%L.th)).toFixed(1)}px,0)`; if(tx!==L.tx){ L.tx=tx; L.d.style.transform=tx; } }
+    if(!RM) for(const I of imgs){ const top=I.top-y; if(top+I.h<-40||top>vh+40)continue; const t=clamp(((top+I.h/2)-vh/2)/(vh/2+I.h/2),-1,1);
+      const v=(-t*I.amp).toFixed(1)+'px'; if(v!==I.v){ I.v=v; I.el.style.setProperty('--plx',v); } }
   }
-  let queued=false; const kick=()=>{ if(queued)return; queued=true; run(()=>{queued=false; if(scrollY!==lastY){lastY=scrollY;} update(); return false;}); };
-  let scT=0; const onScroll=()=>{ host.classList.add('scrolling'); clearTimeout(scT); scT=setTimeout(()=>host.classList.remove('scrolling'),250); kick(); };
-  on(window,'scroll',onScroll,{passive:true}); cleanups.push(()=>clearTimeout(scT)); on(window,'resize',kick);
+  let queued=false; const kick=()=>{ if(queued)return; queued=true; run(()=>{ queued=false; update(FB.y,FB.vh||innerHeight); return false; }); };
+  on(window,'scroll',kick,{passive:true}); on(window,'resize',()=>{dirty=true;kick();});
+  const ro=new ResizeObserver(()=>{dirty=true;kick();}); ro.observe(document.body); cleanups.push(()=>ro.disconnect());
   (window.requestIdleCallback||(f=>setTimeout(f,200)))(build,{timeout:1200});
-  return ()=>{ cleanups.forEach(f=>f()); heroCvs().forEach(c=>c.style.opacity=''); };
+  return ()=>{ cleanups.forEach(f=>f()); const st=stage(); if(st) st.style.opacity=''; };
 }

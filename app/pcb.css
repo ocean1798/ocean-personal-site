@@ -409,10 +409,10 @@ body:has(.pcb)::before{display:none}
 
 /* background parallax (below the hero) */
 .pcb #bgp{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0;contain:strict}
-.pcb #bgp .bgp-l{position:absolute;left:0;right:0;top:0;background-repeat:repeat;backface-visibility:hidden}
-.pcb #bgp.scrolling .bgp-l{will-change:transform}
-.pcb #bgp .bgp-def,.pcb #bgp .bgp-dense,.pcb #bgp .bgp-diff,.pcb #bgp .bgp-wave,.pcb #bgp .bgp-sparse{opacity:0;transition:opacity .35s linear,visibility .35s}
+.pcb #bgp .bgp-l{position:absolute;left:0;right:0;top:0;background-repeat:repeat;backface-visibility:hidden;will-change:transform}
 .pcb .ph-frame img{translate:0 var(--plx,0px);scale:1.12}
 .pcb .m2-shot{overflow:hidden;border-radius:14px}
 .pcb .m2-shot img.shot,.pcb .m2-shot canvas{translate:0 var(--plx,0px);scale:1.08}
 .pcb.reduced .ph-frame img,.pcb.reduced .m2-shot img.shot,.pcb.reduced .m2-shot canvas{translate:none;scale:none}
+
+.pcb #pcb-stage{position:fixed;inset:0;z-index:0;pointer-events:none;background:rgb(6,15,11);contain:strict}
