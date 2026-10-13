@@ -55,10 +55,10 @@ const CHAR={work:'dense',plugins:'diff',more:'def',tools:'def',music:'wave',phot
 export function initBgParallax(root,{run,RM}){
   const cleanups=[]; const on=(t,ty,f,o)=>{t.addEventListener(ty,f,o);cleanups.push(()=>t.removeEventListener(ty,f,o));};
   const mob=matchMedia('(max-width: 700px), (pointer: coarse)').matches;
-  const dpr=Math.min(devicePixelRatio||1,2), K=mob?.6:1;   // mobile: reduced intensity + travel
+  const dpr=Math.min(devicePixelRatio||1,1.5), K=mob?.6:1;   // mobile: reduced intensity + travel
   const host=document.createElement('div'); host.id='bgp'; host.setAttribute('aria-hidden','true');
   const anchor=root.querySelector('.vignette'); root.insertBefore(host,anchor||root.firstChild); cleanups.push(()=>host.remove());
-  const els={}; const heroCv=root.querySelector('canvas#pcb');
+  const els={}; const heroCvs=()=>root.querySelectorAll('canvas#pcb, canvas#pcb-fx');
   const build=()=>{ LAYERS.forEach(([k,rate])=>{ const c=MAKERS[k](dpr), [tw,th]=SIZE[k]; const d=document.createElement('div'); d.className='bgp-l bgp-'+k;
       d.style.backgroundImage=`url(${c.toDataURL('image/png')})`; d.style.backgroundSize=`${tw}px ${th}px`; d.style.height=`calc(100% + ${th}px)`; host.appendChild(d); els[k]={d,rate:rate*K,th,op:-1}; }); update(); };
   const secs=[...root.querySelectorAll('main > section[id]')].filter(s=>CHAR[s.id]);
@@ -67,9 +67,9 @@ export function initBgParallax(root,{run,RM}){
   let lastY=-1;
   function update(){
     const y=scrollY, vh=innerHeight;
-    const f=clamp((y-vh*.35)/(vh*.55),0,1); host.style.opacity=(f*(mob?.6:1)).toFixed(3);
-    if(heroCv){ const o=(1-f*.72).toFixed(3); if(o!==heroCv.style.opacity) heroCv.style.opacity=o; }   // let the moving layers lead below the hero
-    if(!RM) for(const k in els){ const L=els[k]; const off=(y*L.rate)%L.th; L.d.style.transform=`translate3d(0,${(-off).toFixed(1)}px,0)`; }
+    const f=clamp((y-vh*.35)/(vh*.55),0,1); host.style.opacity=(f*(mob?.6:1)).toFixed(3); const hv=f>0?'visible':'hidden'; if(host.style.visibility!==hv) host.style.visibility=hv;   // nothing to composite while under the hero
+    { const o=(1-f*.72).toFixed(3); heroCvs().forEach(c=>{ if(o!==c.style.opacity) c.style.opacity=o; }); }   // let the moving layers lead below the hero
+    if(!RM&&f>0) for(const k in els){ const L=els[k]; const off=(y*L.rate)%L.th; L.d.style.transform=`translate3d(0,${(-off).toFixed(1)}px,0)`; }
     // per-section character crossfade (by distance of section from viewport centre)
     const w={def:0,dense:0,diff:0,wave:0,sparse:0}; const mid=vh/2;
     secs.forEach(s=>{ const r=s.getBoundingClientRect(); const d=r.top>mid?r.top-mid:(r.bottom<mid?mid-r.bottom:0); const wgt=clamp(1-d/(vh*.6),0,1); const key=CHAR[s.id]; w[key]=Math.max(w[key],wgt); });
@@ -79,7 +79,8 @@ export function initBgParallax(root,{run,RM}){
       const amp=(el.classList.contains('m2-shot')?14:20)*K; el.style.setProperty('--plx',(-t*amp).toFixed(1)+'px'); });
   }
   let queued=false; const kick=()=>{ if(queued)return; queued=true; run(()=>{queued=false; if(scrollY!==lastY){lastY=scrollY;} update(); return false;}); };
-  on(window,'scroll',kick,{passive:true}); on(window,'resize',kick);
+  let scT=0; const onScroll=()=>{ host.classList.add('scrolling'); clearTimeout(scT); scT=setTimeout(()=>host.classList.remove('scrolling'),250); kick(); };
+  on(window,'scroll',onScroll,{passive:true}); cleanups.push(()=>clearTimeout(scT)); on(window,'resize',kick);
   (window.requestIdleCallback||(f=>setTimeout(f,200)))(build,{timeout:1200});
-  return ()=>{ cleanups.forEach(f=>f()); if(heroCv) heroCv.style.opacity=''; };
+  return ()=>{ cleanups.forEach(f=>f()); heroCvs().forEach(c=>c.style.opacity=''); };
 }
