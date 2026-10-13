@@ -39,7 +39,7 @@ export function SiteChrome({ children }: SiteChromeProps) {
           </div>
 
           <div className="site-footer-links" aria-label="页脚链接">
-            <a href="mailto:2711180012@qq.com">邮箱</a>
+            <a href="mailto:1798@duck.com">邮箱</a>
             <a
               href="https://github.com/ocean1798"
               target="_blank"

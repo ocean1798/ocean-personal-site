@@ -144,8 +144,8 @@ export default function AboutPage() {
         <p className="eyebrow">保持联系</p>
         <h2>有复杂产品、EDA 工具或 AI 实验想交流？欢迎给我写信。</h2>
         <div className="contact-actions">
-          <a className="button button-primary" href="mailto:2711180012@qq.com">
-            2711180012@qq.com <span aria-hidden="true">↗</span>
+          <a className="button button-primary" href="mailto:1798@duck.com">
+            1798@duck.com <span aria-hidden="true">↗</span>
           </a>
           <a
             className="button button-secondary"

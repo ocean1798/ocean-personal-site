@@ -333,8 +333,8 @@ export default function WorkPage() {
         <p className="eyebrow">保持联系</p>
         <h2>如果你也在处理复杂工具、工程协作或 AI 落地，欢迎和我交流。</h2>
         <div className="contact-actions">
-          <a className="button button-primary" href="mailto:2711180012@qq.com">
-            2711180012@qq.com <span aria-hidden="true">↗</span>
+          <a className="button button-primary" href="mailto:1798@duck.com">
+            1798@duck.com <span aria-hidden="true">↗</span>
           </a>
         </div>
       </section>
