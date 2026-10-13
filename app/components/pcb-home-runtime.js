@@ -89,6 +89,11 @@ export function initPcbHome(root, dataBase) {
       S=Math.max(W/bw,H/bh)*(mob?1.9:P('sc',.95)); fx=P('fx',88);fy=P('fy',74.4); ax=mob?.5:P('ax',.78); ay=P('ay',.5); }
     else { S=Math.max(W/bw,H/bh)*(mob?2.1:1.35); fx=bx0+bw*(mob?.62:.58); fy=by0+bh*.30; ax=mob?.5:.68; ay=.5; }
     OX=0;OY=0; const [px0,py0]=T(fx,fy); OX=W*ax-px0; OY=H*ay-py0;
+    // wide viewports: grow scale around the anchor until all four viewport corners sit on the board
+    if(!mob){ const A=[W*ax,H*ay], m=2;
+      const inside=f=>[[0,0],[W,0],[0,H],[W,H]].every(([X,Y])=>{const [x,y]=Tinv(A[0]+(X-A[0])/f,A[1]+(Y-A[1])/f);return x>=bx0-m&&x<=bx1+m&&y>=by0-m&&y<=by1+m;});
+      if(!inside(1)){ let lo=1,hi=1; while(!inside(hi)&&hi<6)hi*=1.25; for(let i=0;i<20;i++){const mid=(lo+hi)/2; if(inside(mid))hi=mid; else lo=mid;}
+        S*=hi; OX=0;OY=0; const [qx,qy]=T(fx,fy); OX=W*ax-qx; OY=H*ay-qy; } }
     base=paint(false); lit=paint(true);
   }
   function mk(){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';return [c,g];}
