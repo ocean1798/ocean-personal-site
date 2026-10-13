@@ -11,6 +11,7 @@ import {
   WorkSection,
 } from "./components/pcb/home-sections";
 import { PcbHomeShell } from "./components/pcb/pcb-home-shell";
+import { EndingBoard } from "./components/pcb/ending-section";
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
         <ToolsSection />
         <MusicSection />
         <PhotoSection />
+        <EndingBoard />
         <ContactSection />
       </main>
       <PcbFooter />

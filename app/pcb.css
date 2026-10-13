@@ -406,3 +406,19 @@ body:has(.pcb)::before{display:none}
 .pcb #m2-panel input[type=range]{width:100px;accent-color:#b8ff3c}.pcb #m2-panel input{accent-color:#b8ff3c}
 .pcb #m2-panel output{min-width:34px;text-align:right;color:var(--cu2)}
 .pcb #m2-panel hr{border:0;border-top:1px solid rgba(127,154,136,.25);margin:7px 0 1px}
+/* ending: whole page as one board */
+.pcb .ending{position:relative;height:300vh;margin:40px 0 0}
+.pcb .ending-pin{position:sticky;top:0;height:100vh;overflow:hidden}
+.pcb .ending-cv{position:absolute;inset:0;width:100%;height:100%}
+.pcb .ending-parts{position:absolute;inset:0;pointer-events:none}
+.pcb .ending-part{position:absolute;left:0;top:0;border-radius:8px;opacity:0;transition:opacity .2s;outline-offset:4px}
+.pcb .ending-part span{position:absolute;left:50%;bottom:calc(100% + 14px);transform:translate(-50%,4px);opacity:0;transition:opacity .15s,transform .15s;white-space:nowrap;
+  font:11px ui-monospace,monospace;color:#e9f0e6;letter-spacing:.06em;padding:2px 7px;border:1px solid rgba(233,240,230,.35);border-radius:3px;background:rgba(5,12,9,.88);pointer-events:none}
+.pcb .ending-part:hover span,.pcb .ending-part:focus-visible span{opacity:1;transform:translate(-50%,0)}
+.pcb .ending-top{position:absolute;left:0;top:0;opacity:0;text-decoration:none;font:11px ui-monospace,monospace;color:var(--neon);white-space:nowrap;
+  display:flex;align-items:center;gap:8px;margin:-14px 0 0 -14px;padding:0 8px 0 0;height:28px;line-height:28px}
+.pcb .ending-top i{display:inline-block;width:28px;height:28px;border-radius:50%}
+.pcb .ending-top:hover{color:#fff;text-shadow:0 0 10px var(--neon)}
+.pcb .ending.static{height:auto}
+.pcb .ending.static .ending-pin{position:relative;height:min(100vh,760px)}
+@media (max-width:700px){.pcb .ending.static .ending-pin{height:auto;aspect-ratio:1000/1100}.pcb .ending-top{flex-direction:row}}

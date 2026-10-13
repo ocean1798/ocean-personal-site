@@ -3,6 +3,8 @@
 // Tuning panel only with ?tune in the URL.
 
 /** @param {HTMLElement} root .pcb wrapper  @returns {() => void} cleanup */
+import { initEnding } from './ending-board.js';
+
 export function initMotion2(root){
 const cleanups=[]; let disposed=false;
 const on=(t,type,fn,o)=>{t.addEventListener(type,fn,o);cleanups.push(()=>t.removeEventListener(type,fn,o));};
@@ -47,7 +49,7 @@ on(document,'click',e=>{ if(!P.ss||e.defaultPrevented||e.button!==0||e.metaKey||
 const trace=document.createElement('nav'); trace.id='m2-trace'; trace.setAttribute('aria-label','页面进度');
 trace.innerHTML='<div class="cu"></div><div class="fill"></div>'; root.appendChild(trace); cleanups.push(()=>trace.remove());
 const tfill=trace.querySelector('.fill');
-const secs=[...root.querySelectorAll('#top, main > section[id]')];
+const secs=[...root.querySelectorAll('#top, main > section[id]:not(#ending)')];
 const vias=secs.map(s=>{ const lab=s.id==='top'?'00 · 首页':((s.querySelector('.sec-label')||{}).textContent||s.id).trim();
   const b=document.createElement('button'); b.type='button'; b.className='via'; b.setAttribute('aria-label','跳到 '+lab); const sp=document.createElement('span'); sp.textContent=lab; b.appendChild(sp);
   b.addEventListener('click',()=>scrollToY(s.getBoundingClientRect().top+scrollY-70)); trace.appendChild(b); return [b,s]; });
@@ -178,7 +180,7 @@ function stkStep(now,dt){
     let s=1; if(u<.05){const k=u/.05; s=1+2.70158*Math.pow(k-1,3)+1.70158*Math.pow(k-1,2);} else if(u>.9) s=1-(u-.9)/.1;
     const z=p.sz*s; if(z<=.5)continue; sx.setTransform(DPR,0,0,DPR,p.x*DPR,p.y*DPR); sx.rotate(p.rot); sx.drawImage(p.sp,-z/2,-z/2,z,z); }
   sx.setTransform(1,0,0,1,0,0); if(!parts.length&&!pending.length){sx.clearRect(0,0,sc.width,sc.height);return false;} }
-const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,#m2-panel,#pcb-status,[id^="dify-"]';
+const BLOCK='a,button,input,select,textarea,label,summary,details,iframe,img,video,[role=button],[tabindex],[contenteditable],.demo,.dropzone,.cta,.chip,.music,.ph-row,.tools,.bento,.flow-min,.comp-hd,#m2-trace,.ending-parts a,#m2-panel,#pcb-status,[id^="dify-"]';
 on(document,'pointerdown',e=>{ if(!P.st||e.button!==0||e.pointerType!=='mouse')return; const t=e.target;
   if(!(t instanceof Element)||t.closest(BLOCK))return;
   const hero=root.querySelector('.pcb-hero'); if(hero&&e.pageY<hero.getBoundingClientRect().bottom+scrollY)return;   // hero PCB uses hover; keep clicks there inert
@@ -198,5 +200,6 @@ if(new URLSearchParams(location.search).has('tune')){
     else { el.value=P[k]; out.textContent=el.value; el.addEventListener('input',()=>{P[k]=+el.value; out.textContent=el.value;}); } });
 }
 window.__m2spray=spray;
+cleanups.push(initEnding(root,{run,scrollToY,RM}));
 return ()=>{ disposed=true; cleanups.forEach(f=>f()); delete window.__m2spray; };
 }
