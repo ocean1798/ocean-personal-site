@@ -143,9 +143,49 @@ export function initPcbHome(root, dataBase) {
     const p=new Path2D(); n.s.forEach(sg=>{p.moveTo(...T(sg[0],sg[1]));p.lineTo(...T(sg[2],sg[3]));});
     const w=Math.max(1.4,(n.s[0]?.[4]||.2)*S); const o={p,w}; netCache.set(n.i,o); return o;
   }
+  /* ---- motion batch 1: signal pulses + pad trail + status bar ---- */
+  // chain each net's consecutive segments into polylines (board mm), parameterised by length
+  const polys=[]; // {n,pts:[[x,y]...],cum:[...],L}
+  B.nets.forEach(n=>{ let cur=null;
+    const flush=()=>{ if(cur&&cur.pts.length>1&&cur.L>.5){polys.push(cur); (n.polys||(n.polys=[])).push(cur);} cur=null; };
+    n.s.forEach(sg=>{ const lp=cur&&cur.pts[cur.pts.length-1];
+      if(!lp||Math.abs(lp[0]-sg[0])>1e-3||Math.abs(lp[1]-sg[1])>1e-3||cur.layer!==sg[5]){ flush(); cur={n,layer:sg[5],pts:[[sg[0],sg[1]]],cum:[0],L:0}; }
+      const d=Math.hypot(sg[2]-sg[0],sg[3]-sg[1]); if(d<1e-4)return; cur.L+=d; cur.pts.push([sg[2],sg[3]]); cur.cum.push(cur.L); });
+    flush(); });
+  const longPolys=polys.filter(p=>p.L>12);
+  function polyAt(P,d){ // point at arc length d (board mm)
+    const c=P.cum; let lo=0,hi=c.length-1; if(d<=0)return P.pts[0]; if(d>=P.L)return P.pts[hi];
+    while(hi-lo>1){const m=(lo+hi)>>1; if(c[m]<d)lo=m; else hi=m;}
+    const u=(d-c[lo])/((c[hi]-c[lo])||1), a=P.pts[lo], b=P.pts[hi]; return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u]; }
+  const onScreen=(x,y)=>{const [X,Y]=T(x,y);return X>40&&X<W-40&&Y>60&&Y<H-40;};
+  function pickPoly(net){
+    const pool=net?(net.polys||[]):longPolys; if(!pool.length)return null;
+    for(let t=0;t<14;t++){const P=pool[(Math.random()*pool.length)|0]; const m=polyAt(P,P.L/2); if(net||onScreen(m[0],m[1]))return P;}
+    return pool[(Math.random()*pool.length)|0]; }
+  const pulses=[], flashes=[], trail=[];
+  const NP=3+((Math.random()*4)|0);           // 3..6 pulses
+  function spawn(p,net){ const P=pickPoly(net); if(!P){p.P=null;return;} const rev=Math.random()<.5;
+    p.P=P; p.rev=rev; p.d=0; p.v=(170+Math.random()*130); p.net=net||null; p.delay=Math.random()*.6; }
+  for(let i=0;i<NP;i++){const p={}; spawn(p,null); p.d=Math.random()*(p.P?p.P.L:0); pulses.push(p);}
+  const TRAIL_N=14, GRID=15;
+  // status bar
+  const sb=$('pcb-status'), sbX=$('sb-x'), sbY=$('sb-y'), sbN=$('sb-net'), sbT=$('sb-t');
+  const pad4=v=>String(Math.max(0,Math.min(9999,Math.round(v)))).padStart(4,'0');
+  const hktFmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Hong_Kong',hour:'2-digit',minute:'2-digit',hour12:false});
+  let sbNet='', sbClock='';
+  function tickClock(){ const t=hktFmt.format(new Date())+' HKT'; if(t!==sbClock&&sbT){sbClock=t;sbT.textContent=t;} }
+  tickClock(); const clk=setInterval(tickClock,1000); cleanups.push(()=>clearInterval(clk));
+  function setNet(name){ if(name!==sbNet&&sbN){sbNet=name;sbN.textContent=name;} }
+  // pause when hidden / hero off-screen
+  let heroVis=true, running=false;
+  const heroEl=root.querySelector('.pcb-hero');
+  function kick(){ if(!running&&!reduce&&heroVis&&!document.hidden&&!disposed){running=true;last=performance.now();raf(frame);} }
+  if(heroEl) IO(e=>{heroVis=e[0].isIntersecting; kick();},{threshold:0}).observe(heroEl);
+  const onVis=()=>kick(); document.addEventListener('visibilitychange',onVis); cleanups.push(()=>document.removeEventListener('visibilitychange',onVis));
   const label=$('net-label');
-  let cur=null, curA=0, prev=null, prevA=0, last=performance.now();
+  let cur=null, curA=0, prev=null, prevA=0; let last=performance.now();
   function frame(now){
+    if(!heroVis||document.hidden||disposed){running=false;return;}
     const dt=Math.min(.05,(now-last)/1000); last=now;
     const scrollFade=Math.max(.12,1-scrollY/(H*0.9));
     let target;
@@ -181,19 +221,101 @@ export function initPcbHome(root, dataBase) {
       n.v.forEach(v=>{ctx.fillStyle='#b8ff3c';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(2,v[2]*S/2),0,7);ctx.fill();ctx.fillStyle='#030806';ctx.beginPath();ctx.arc(...T(v[0],v[1]),Math.max(1,v[2]*S/4),0,7);ctx.fill();});
     }
     ctx.globalAlpha=1;
+    const userHover=hasPtr&&now-lastMove<2600&&cur&&curA>.2;
+    drawMotion(dt,now,userHover?cur:null,scrollFade);
     // cursor reticle
     ctx.strokeStyle='rgba(184,255,60,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(sx,sy,10,0,7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx-16,sy);ctx.lineTo(sx-6,sy);ctx.moveTo(sx+6,sy);ctx.lineTo(sx+16,sy);ctx.moveTo(sx,sy-16);ctx.lineTo(sx,sy-6);ctx.moveTo(sx,sy+6);ctx.lineTo(sx,sy+16);ctx.stroke();
     if(cur && scrollFade>.3){ label.style.opacity=1; label.style.transform=`translate(${Math.min(W-220,sx+18)}px,${sy-34}px)`;
       label.textContent=(cur.n||'net').replace(/^\//,'').split('/').pop(); }
     else label.style.opacity=0;
-    if(!reduce) raf(frame);
+    if(!reduce) raf(frame); else running=false;
   }
+  function drawMotion(dt,now,net,fade){
+    // 1) pad trail (faintest): copper squares, exponential fade
+    for(let i=trail.length-1;i>=0;i--){const t=trail[i]; const a=Math.exp(-(now-t.t)/420)*Math.pow(.86,trail.length-1-i);
+      if(a<.02)continue; const s=GRID*.52; ctx.globalAlpha=a*fade;
+      ctx.fillStyle='rgba(224,150,70,.42)'; ctx.fillRect(t.x-s/2,t.y-s/2,s,s);
+      ctx.strokeStyle='rgba(246,192,106,.35)'; ctx.lineWidth=1; ctx.strokeRect(t.x-s/2+.5,t.y-s/2+.5,s-1,s-1); }
+    // 2) signal pulses (between trail and highlight)
+    for(const p of pulses){
+      if(p.net!==net||!p.P){ spawn(p,net); p.delay=net?Math.random()*.25:p.delay; }
+      if(!p.P)continue;
+      if(p.delay>0){p.delay-=dt;continue;}
+      p.d+=p.v/S*dt;
+      const at=d=>{const q=polyAt(p.P,p.rev?p.P.L-d:d);return T(q[0],q[1]);};
+      if(p.d>=p.P.L){ const e=at(p.P.L); flashes.push({x:e[0],y:e[1],t:now}); if(flashes.length>24)flashes.shift(); spawn(p,net); continue; }
+      const tailMM=70/S, N=12; ctx.lineCap='round';
+      let prevPt=at(p.d);
+      for(let k=1;k<=N;k++){ const d=p.d-tailMM*k/N; if(d<0)break; const q=at(d);
+        ctx.globalAlpha=fade*.62*(1-k/N)**1.6; ctx.strokeStyle='#b8ff3c'; ctx.lineWidth=3*(1-k/(N*1.4));
+        ctx.beginPath(); ctx.moveTo(prevPt[0],prevPt[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); prevPt=q; }
+      const h=at(p.d); ctx.globalAlpha=fade*.32; ctx.fillStyle='#b8ff3c'; ctx.beginPath(); ctx.arc(h[0],h[1],7,0,7); ctx.fill();
+      ctx.globalAlpha=fade*.82; ctx.fillStyle='#d4ff80'; ctx.beginPath(); ctx.arc(h[0],h[1],2.7,0,7); ctx.fill();
+    }
+    // 3) pad flash at arrival
+    for(let i=flashes.length-1;i>=0;i--){const f=flashes[i], u=(now-f.t)/380; if(u>=1){flashes.splice(i,1);continue;}
+      const r=3+u*7; ctx.globalAlpha=fade*.7*(1-u); ctx.strokeStyle='#b8ff3c'; ctx.lineWidth=1.4; ctx.strokeRect(f.x-r,f.y-r,r*2,r*2);
+      ctx.globalAlpha=fade*.5*(1-u); ctx.fillStyle='#d4ff80'; ctx.fillRect(f.x-2.5,f.y-2.5,5,5); }
+    ctx.globalAlpha=1;
+    setNet(net?(net.n||'net').replace(/^\//,'').split('/').pop():'\u2014');
+  }
+  on('pointermove',e=>{
+    if(e.pointerType==='mouse'){ if(sbX){sbX.textContent=pad4(e.clientX);sbY.textContent=pad4(e.clientY);}
+      if(!reduce&&scrollY<H*.95){ const gx=Math.round(e.clientX/GRID)*GRID, gy=Math.round(e.clientY/GRID)*GRID, l=trail[trail.length-1];
+        if(!l||l.x!==gx||l.y!==gy){ trail.push({x:gx,y:gy,t:performance.now()}); if(trail.length>TRAIL_N)trail.shift(); } } }
+  },{passive:true});
   on('pointermove',e=>{hasPtr=e.pointerType==='mouse'||hasPtr;mx=e.clientX;my=e.clientY;lastMove=performance.now();if(e.pointerType!=='mouse'){hasPtr=true;}},{passive:true});
   on('resize',()=>{netCache.clear();layout();});
   layout(); sx=W*.7; sy=H*.4;
-  if(reduce){ ctx.drawImage(base,0,0); } else raf(frame);
+  if(reduce){ ctx.drawImage(base,0,0); } else kick();
   }).catch(e=>{if(disposed)return;const l=$('pcb-load');l.textContent='电路板数据加载失败';console.warn(e);});
+
+  /* ===== Motion batch 1: title scramble + text power-on (one shared on-demand rAF) ===== */
+  const SCR_CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*+=<>/\\|_~';
+  const LD=40;                                   // letterDelay ms
+  const scrJobs=[], powerEls=[];
+  let uiQueued=false;
+  const uiKick=()=>{ if(!uiQueued&&!disposed){uiQueued=true;requestAnimationFrame(uiTick);} };
+  function wrapChars(el,cls){ // split text nodes into per-char spans, copy stays identical
+    const out=[], w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), nodes=[]; let n;
+    while((n=w.nextNode())) nodes.push(n);
+    nodes.forEach(t=>{ if(cls==='sc'&&t.parentElement.closest('.latin'))return; const f=document.createElement('span'); f.className=cls+'w';
+      for(const c of t.data){ if(/\s/.test(c)){f.appendChild(document.createTextNode(c));continue;}
+        const sp=document.createElement('span'); sp.className=cls; sp.textContent=c; sp.dataset.c=c; f.appendChild(sp); out.push(sp);} 
+      t.parentNode.replaceChild(f,t); });
+    return out; }
+  function startScramble(el){
+    if(el.dataset.scr)return; el.dataset.scr='1';
+    if(!el.hasAttribute('aria-label')) el.setAttribute('aria-label',el.textContent.trim());
+    const spans=wrapChars(el,'sc'); spans.forEach(s=>s.setAttribute('aria-hidden','true'));
+    const pool=spans.map(s=>s.dataset.c);
+    scrJobs.push({spans,pool,t0:performance.now(),lastSwap:0}); uiKick(); }
+  function uiTick(now){
+    uiQueued=false; let more=false;
+    for(let j=scrJobs.length-1;j>=0;j--){ const J=scrJobs[j], el=now-J.t0, swap=now-J.lastSwap>48; if(swap)J.lastSwap=now; let live=false;
+      J.spans.forEach((s,i)=>{ const st=i*LD, end=st+4*LD, c=s.dataset.c;
+        if(el<st){ if(!s.classList.contains('wait'))s.classList.add('wait'); live=true; }
+        else if(el<end){ s.classList.remove('wait'); s.classList.add('scr'); live=true;
+          if(swap){ const ascii=c.charCodeAt(0)<256; s.textContent=ascii?SCR_CHARS[(Math.random()*SCR_CHARS.length)|0]:J.pool[(Math.random()*J.pool.length)|0]; } }
+        else if(s.classList.contains('scr')||s.classList.contains('wait')){ s.classList.remove('scr','wait'); s.textContent=c; } });
+      if(live)more=true; else scrJobs.splice(j,1); }
+    // scroll-linked power-on: fill dim -> bright per character
+    const vh=innerHeight;
+    powerEls.forEach(P=>{ const r=P.el.getBoundingClientRect(); if(r.bottom<-50||r.top>vh+50)return;
+      const prog=Math.max(0,Math.min(1,(vh*.88-r.top)/(Math.max(r.height,40)+vh*.38))), k=prog*(P.spans.length+6);
+      if(Math.abs(k-P.k)<.01)return; P.k=k;
+      P.spans.forEach((s,i)=>{ const v=Math.max(0,Math.min(1,(k-i)/6)); s.style.opacity=(.22+.78*v).toFixed(3); }); });
+    if(more)uiKick();
+  }
+  if(!reduce){
+    const heads=[...root.querySelectorAll('main h2')];
+    const ioS=IO(es=>es.forEach(e=>{ if(e.isIntersecting){ ioS.unobserve(e.target); startScramble(e.target);} }),{threshold:.6});
+    heads.forEach(h=>ioS.observe(h));
+    const nm=root.querySelector('.pcb-hero .name'); if(nm) setTimeout(()=>startScramble(nm),150);
+    root.querySelectorAll('[data-power]').forEach(el=>{ powerEls.push({el,spans:wrapChars(el,'pw'),k:-1}); });
+    if(powerEls.length){ on('scroll',uiKick,{passive:true}); on('resize',uiKick); uiKick(); }
+  }
 
   /* ===== Scroll assembly ===== */
   const comps = root.querySelectorAll('[data-comp]');

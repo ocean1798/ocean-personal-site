@@ -373,3 +373,15 @@ body:has(.pcb)::before{display:none}
 .pcb .pcb-nav .brand{white-space:nowrap;flex-shrink:0}
 .pcb .board-credit{bottom:auto;top:calc(100vh - 250px);padding:4px 8px;border-radius:6px;background:rgba(5,12,9,.6);border:1px solid rgba(127,154,136,.25)}
 @media(max-width:900px){.pcb .brand-latin{display:none}}
+
+/* motion batch 1 */
+.pcb #pcb-status{position:fixed;left:14px;bottom:12px;z-index:4;pointer-events:none;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:rgba(200,215,205,.72);
+  background:rgba(5,12,9,.55);border:1px solid rgba(127,154,136,.22);border-radius:4px;padding:5px 9px;backdrop-filter:blur(4px);white-space:nowrap;max-width:calc(100vw - 110px);overflow:hidden;text-overflow:ellipsis}
+.pcb #pcb-status b{font-weight:500;color:var(--cu2)}
+.pcb #pcb-status #sb-net{color:var(--neon)}
+.pcb #pcb-status i{font-style:normal;opacity:.45;margin:0 .6em}
+@media (hover:none),(pointer:coarse){.pcb #pcb-status{display:none}}
+.pcb .sc.wait{opacity:0}
+.pcb .sc.scr{color:var(--neon);text-shadow:0 0 12px rgba(184,255,60,.45)}
+.pcb .pw{opacity:.22}
+.pcb.reduced .pw,.pcb.reduced .sc{opacity:1}
