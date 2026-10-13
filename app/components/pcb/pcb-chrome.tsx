@@ -13,8 +13,8 @@ const homeAnchors = [
 export function PcbNav({ onHome = false }: { onHome?: boolean }) {
   return (
     <nav className="pcb-nav" aria-label="主导航">
-      <Link className="brand" href="/" aria-label="Ocean 首页">
-        <span className="led" aria-hidden="true"></span>Ocean
+      <Link className="brand" href="/" aria-label="海洋湃 首页">
+        <span className="led" aria-hidden="true"></span>海洋湃<span className="brand-latin">Ocean</span>
       </Link>
       <div className="nav-links">
         {onHome
@@ -36,7 +36,12 @@ export function PcbNav({ onHome = false }: { onHome?: boolean }) {
 export function PcbFooter() {
   return (
     <footer className="pcb-footer">
-      <span>© 2026 Ocean · 深圳</span>
+      <span>© 2026 海洋湃 Ocean · 深圳</span>
+      <span id="board-credit">
+        背景电路板：
+        <a href="https://oshwhub.com/oshwhub/dian-nao-zhu-ban" target="_blank" rel="noopener">【全网首发】X86电脑主板</a>
+        （LGA1700 · 4 层）· 作者 OSHWHub 官方 · GPL-3.0 · 由原始 PCB 文件渲染
+      </span>
       <span>插件和项目均为个人作品，与公司无关</span>
     </footer>
   );

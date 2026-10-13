@@ -102,15 +102,20 @@ const HOME_SECTIONS = [
   ["contact", "07 · 联系"],
 ];
 
-test("renders the PCB hero with the fixed headline and board attribution", async () => {
+test("renders the PCB hero with name, avatar, tagline and board attribution", async () => {
   const html = await render("/");
 
   assert.match(html, /<html lang="zh-CN">/);
   assert.match(html, /class="pcb"/);
   assert.match(html, /<canvas id="pcb"/);
   assert.match(html, /aria-label="让噪声化为秩序，让想法长出形状。"/);
-  assert.match(html, /Ocean · 产品经理/);
-  assert.match(html, /嘉立创 EDA 专业版产品经理，做 PCB 功能。/);
+  assert.match(html, /<h1 class="name">海洋湃<span class="latin">Ocean<\/span><\/h1>/);
+  assert.match(html, /ocean-pixel-portrait-320\.png/);
+  assert.match(html, /嘉立创 EDA 产品经理 · 深圳/);
+  assert.match(html, /<title>海洋湃 Ocean｜嘉立创 EDA 产品经理<\/title>/);
+  assert.match(html, /class="board-credit" href="#board-credit">背景板 ↗/);
+  assert.match(html, /id="board-credit"/);
+  assert.doesNotMatch(html, /chip-tag|class="attrib"|Ocean · 产品经理/);
   assert.match(html, /https:\/\/oshwhub\.com\/oshwhub\/dian-nao-zhu-ban/);
   assert.match(html, /GPL-3\.0/);
   assert.doesNotMatch(html, /__pcb/);
