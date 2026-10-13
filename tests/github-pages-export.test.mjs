@@ -81,23 +81,12 @@ test("prefixes framework assets, links, and public images with the repository pa
 
   const home = pages[0];
   assert.match(home, new RegExp(`href="${basePath}/"`));
-  assert.doesNotMatch(home, new RegExp(`href="${basePath}/work/"`));
-  assert.doesNotMatch(home, new RegExp(`href="${basePath}/about/"`));
+  assert.match(home, new RegExp(`href="${basePath}/work/"`));
+  assert.match(home, new RegExp(`href="${basePath}/about/"`));
   assert.match(home, new RegExp(`href="${basePath}/photography/"`));
-  assert.match(
-    home,
-    new RegExp(`src="${basePath}/images/ocean-pixel-portrait-v1.png"`),
-  );
-  assert.match(
-    home,
-    new RegExp(`src="${basePath}/images/brand/jlceda-logo-cn.svg"`),
-  );
-  assert.match(
-    home,
-    new RegExp(
-      `src="${basePath}/images/brand/jlceda-professional-banner.png"`,
-    ),
-  );
+  assert.match(home, new RegExp(`src="${basePath}/images/plugins/diff-pair-radar.png"`));
+  assert.match(home, new RegExp(`src="${basePath}/images/music/28828076.jpg"`));
+  assert.doesNotMatch(home, /__pcb/);
 });
 
 test("rejects root-relative references that omit the repository base path", async () => {
@@ -139,4 +128,17 @@ test("keeps the Dify assistant in the exported client bundle", async () => {
   assert.match(home, /由 Dify 提供/);
   assert.match(clientJavaScript, /https:\/\/udify\.app\/embed\.min\.js/);
   assert.match(clientJavaScript, /v6MceBc699WCQuNp/);
+});
+
+test("exports the PCB board data and bakes the base path into the client loader", async () => {
+  for (const name of ["board-x86.json.gz", "board-x86.json", "LICENSE", "README.md"]) {
+    await assert.doesNotReject(access(new URL(`pcb-data/${name}`, outputDirectory)), `missing pcb-data/${name}`);
+  }
+  const chunksDirectory = new URL("../out/_next/static/chunks/", import.meta.url);
+  const chunkNames = await readdir(chunksDirectory, { recursive: true });
+  const js = (
+    await Promise.all(chunkNames.filter((n) => n.endsWith(".js")).map((n) => readFile(new URL(n, chunksDirectory), "utf8")))
+  ).join("\n");
+  assert.match(js, /\/ocean-personal-site\/pcb-data/);
+  assert.doesNotMatch(js, /__pcb/);
 });

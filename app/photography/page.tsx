@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { PhotographyReveal } from "../components/photography-reveal";
 import { ResponsivePhoto } from "../components/responsive-photo";
-import { SiteChrome } from "../components/site-chrome";
+import { PcbFooter, PcbNav } from "../components/pcb/pcb-chrome";
+import { withBasePath } from "../lib/site-path";
+import "../pcb.css";
 
 export const metadata: Metadata = {
   title: "摄影",
@@ -126,50 +127,47 @@ const photoGroups = [
 ] as const;
 
 export default function PhotographyPage() {
-  return (
-    <SiteChrome>
-      <PhotographyReveal />
-      <header className="photography-hero section">
-        <h1>我眼中的世界</h1>
-      </header>
+  const photos = photoGroups.flatMap((group) =>
+    group.photos.map((photo, index) => ({
+      ...photo,
+      number: String(group.startNumber + index).padStart(2, "0"),
+    })),
+  );
 
-      {photoGroups.map((group) => (
-        <section
-          className={`photography-chapter section ${group.className}`}
-          key={group.startNumber}
-        >
-          <div className="photography-grid">
-            {group.photos.map((photo, index) => (
-              <figure
-                className={`photography-item ${photo.layout}`}
-                data-photo-reveal
+  return (
+    <div className="pcb pcb-plain">
+      <div className="wrap">
+        <PcbNav />
+        <main id="main-content" className="ph-page">
+          <div className="sec-label lit">摄影</div>
+          <h1>我眼中的世界</h1>
+          <div className="ph-grid">
+            {photos.map((photo) => (
+              <a
+                className="ph"
+                id={`p${photo.number}`}
                 key={photo.name}
+                href={withBasePath(`/images/photography/${photo.name}-1800.jpg`)}
               >
-                <div className="photography-frame">
+                <span className="ph-ref">
+                  {photo.number} · {photo.source}
+                </span>
+                <span className="ph-frame">
                   <ResponsivePhoto
                     name={photo.name}
                     alt={photo.alt}
                     width={photo.width}
                     height={photo.height}
-                    sizes={
-                      photo.layout === "photo-full"
-                        ? "(max-width: 680px) calc(100vw - 2.3rem), min(92vw, 1800px)"
-                        : "(max-width: 680px) calc(100vw - 2.3rem), min(64vw, 1400px)"
-                    }
-                    loading={group.startNumber === 1 && index === 0 ? "eager" : "lazy"}
+                    sizes="(max-width: 800px) 50vw, 300px"
+                    loading={photo.number === "01" ? "eager" : "lazy"}
                   />
-                </div>
-                <figcaption>
-                  <span>
-                    {String(group.startNumber + index).padStart(2, "0")}
-                  </span>
-                  {photo.source}
-                </figcaption>
-              </figure>
+                </span>
+              </a>
             ))}
           </div>
-        </section>
-      ))}
-    </SiteChrome>
+        </main>
+        <PcbFooter />
+      </div>
+    </div>
   );
 }
