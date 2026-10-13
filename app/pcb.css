@@ -348,5 +348,8 @@ body:has(.pcb)::before{display:none}
 .pcb .wrap{max-width:none;margin:0;padding:0 var(--gutter)}
 .pcb .board-sec,.pcb .pcb-footer{max-width:1600px}
 .pcb .pcb-nav .brand{margin-left:0}
-.pcb .hero-keepout{background:linear-gradient(90deg,rgba(4,10,7,.85) 0,rgba(4,10,7,.72) calc(var(--col-left) + 560px),rgba(4,10,7,.2) calc(var(--col-left) + 900px),transparent calc(var(--col-left) + 1150px)),linear-gradient(0deg,rgba(4,10,7,.35),transparent 22%)}
+.pcb .hero-keepout{background:linear-gradient(90deg,rgba(4,10,7,calc(.85*var(--ov-a))) 0,rgba(4,10,7,calc(.72*var(--ov-a))) calc(var(--col-left) + 560px*var(--ov-w)),rgba(4,10,7,calc(.2*var(--ov-a))) calc(var(--col-left) + 900px*var(--ov-w)),transparent calc(var(--col-left) + 1150px*var(--ov-w))),linear-gradient(0deg,rgba(4,10,7,.35),transparent 22%)}
 @media(max-width:900px){.pcb .hero-keepout{background:linear-gradient(180deg,rgba(4,10,7,.55),rgba(4,10,7,.85) 60%)}}
+/* hero tuning (hero-tuner.html): overlay opacity/width, board brightness */
+.pcb{--ov-a:.54;--ov-w:.75}
+.pcb canvas#pcb{filter:brightness(1.23)}

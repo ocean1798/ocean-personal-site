@@ -81,19 +81,18 @@ export function initPcbHome(root, dataBase) {
     const bw=bx1-bx0, bh=by1-by0, mob=W<700;
     const CPU=[88,74.4];                                 // CPU1 (LGA1700) centre, board mm
     MA=1;MB=0;MC=0;MD=1;
+    // Hero framing (tuned in hero-tuner.html at 1920x945)
+    const P={scale:0.47,autoFill:true,fillFactor:0.47,cx:134.3,cy:74.4,ax:78.5,ay:50,rotDeg:-16,squash:0.8};
     let fx,fy,ax,ay;
-    if(FRAME==='center'){ S=Math.max(W/bw,H/bh)*(mob?2.4:1.45); fx=CPU[0];fy=CPU[1]; ax=mob?.5:.40; ay=mob?.36:.47; }
-    else if(FRAME==='tilt'){ const P=(k,d)=>d;
-      const a=P('rot',-0.21), k=P('k',0.8);           // rotate then squash Y => faux perspective
-      MA=Math.cos(a);MB=-Math.sin(a);MC=Math.sin(a)*k;MD=Math.cos(a)*k;
-      S=Math.max(W/bw,H/bh)*(mob?1.9:P('sc',.95)); fx=P('fx',88);fy=P('fy',74.4); ax=mob?.5:P('ax',.78); ay=P('ay',.5); }
-    else { S=Math.max(W/bw,H/bh)*(mob?2.1:1.35); fx=bx0+bw*(mob?.62:.58); fy=by0+bh*.30; ax=mob?.5:.68; ay=.5; }
+    const a=P.rotDeg*Math.PI/180, k=P.squash;                 // rotate then squash Y => faux perspective
+    MA=Math.cos(a);MB=-Math.sin(a);MC=Math.sin(a)*k;MD=Math.cos(a)*k;
+    S=Math.max(W/bw,H/bh)*(mob?1.9:P.scale); fx=P.cx;fy=P.cy; ax=mob?.5:P.ax/100; ay=P.ay/100;
     OX=0;OY=0; const [px0,py0]=T(fx,fy); OX=W*ax-px0; OY=H*ay-py0;
-    // wide viewports: grow scale around the anchor until all four viewport corners sit on the board
-    if(!mob){ const A=[W*ax,H*ay], m=2;
+    // wide viewports: partially grow scale (fillFactor) toward covering all four viewport corners
+    if(!mob && P.autoFill){ const A=[W*ax,H*ay], m=2;
       const inside=f=>[[0,0],[W,0],[0,H],[W,H]].every(([X,Y])=>{const [x,y]=Tinv(A[0]+(X-A[0])/f,A[1]+(Y-A[1])/f);return x>=bx0-m&&x<=bx1+m&&y>=by0-m&&y<=by1+m;});
       if(!inside(1)){ let lo=1,hi=1; while(!inside(hi)&&hi<6)hi*=1.25; for(let i=0;i<20;i++){const mid=(lo+hi)/2; if(inside(mid))hi=mid; else lo=mid;}
-        S*=hi; OX=0;OY=0; const [qx,qy]=T(fx,fy); OX=W*ax-qx; OY=H*ay-qy; } }
+        S*=1+(hi-1)*P.fillFactor; OX=0;OY=0; const [qx,qy]=T(fx,fy); OX=W*ax-qx; OY=H*ay-qy; } }
     base=paint(false); lit=paint(true);
   }
   function mk(){const c=document.createElement('canvas');c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';return [c,g];}
@@ -119,7 +118,7 @@ export function initPcbHome(root, dataBase) {
     B.pads.forEach(pd=>{ if(pd[6])return; const [x,y]=T(pd[0],pd[1]); let w=pd[2]*S,h=pd[3]*S;
       if(pd[7]%180===90){const q=w;w=h;h=q;}
       g.fillStyle=bright?'#f8d48a':'rgba(205,140,60,.62)';
-      const ang=Math.atan2(MC,MA); g.beginPath(); if(pd[4])g.ellipse(x,y,w/2,h/2*(FRAME==='tilt'?.62:1),ang,0,7); else if(ang){g.save();g.translate(x,y);g.transform(MA,MC,MB,MD,0,0);g.rect(-w/2,-h/2,w,h);g.restore();} else g.rect(x-w/2,y-h/2,w,h); g.fill(); });
+      const ang=Math.atan2(MC,MA); g.beginPath(); if(pd[4])g.ellipse(x,y,w/2,h/2*.62,ang,0,7); else if(ang){g.save();g.translate(x,y);g.transform(MA,MC,MB,MD,0,0);g.rect(-w/2,-h/2,w,h);g.restore();} else g.rect(x-w/2,y-h/2,w,h); g.fill(); });
     // vias: annular ring + drill
     B.nets.forEach(n=>n.v.forEach(v=>{const [x,y]=T(v[0],v[1]),r=Math.max(1.6,v[2]*S/2);
       g.fillStyle=bright?'#ffd98f':'rgba(214,150,70,.7)';g.beginPath();g.arc(x,y,r,0,7);g.fill();
