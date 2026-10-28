@@ -23,16 +23,9 @@ type Props = {
 
 const WIDE_QUERY = "(min-width: 640px)";
 
-// Trial knob for the compositing comparison in design-v3: ?album-wc=always keeps will-change on every leaf,
-// the default only promotes a leaf while it is turning.
-function willChangeMode(): "always" | "flip" {
-  try {
-    return new URLSearchParams(location.search).get("album-wc") === "always" ? "always" : "flip";
-  } catch {
-    return "flip";
-  }
-}
-
+// Compositing: a leaf is only promoted (will-change: transform) while it is actually turning (0 < f < 1).
+// The trial measured this against keeping every leaf promoted: same frame times, but less layerize/raster work and
+// fewer GPU layers held (13 leaves on narrow screens), so the lighter "while turning" mode is the only one kept.
 function ensureGate(on: boolean) {
   const existing = document.head.querySelector(`meta[name="${ALBUM_GATE_META}"]`);
   if (on && !existing) {
@@ -124,7 +117,6 @@ export function PhotoAlbum({ photos, children }: Props) {
     const isWide = mode === "wide";
     const leaves = leavesRef.current.slice(0, isWide ? T : count + 1).filter(Boolean) as HTMLDivElement[];
     const L = leaves.length;
-    const wc = willChangeMode();
     const cache = leaves.map(() => ({ tr: "", wc: "", vis: "" }));
     let bookTr = "";
     let lastY = NaN;
@@ -146,7 +138,7 @@ export function PhotoAlbum({ photos, children }: Props) {
           c.tr = tr;
           el.style.transform = tr;
         }
-        const w = wc === "always" || (f > 0 && f < 1) ? "transform" : "auto";
+        const w = f > 0 && f < 1 ? "transform" : "auto";
         if (c.wc !== w) {
           c.wc = w;
           el.style.willChange = w;

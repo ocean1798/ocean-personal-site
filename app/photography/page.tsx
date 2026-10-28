@@ -135,8 +135,8 @@ export default function PhotographyPage() {
     })),
   );
 
-  // trial: only photos 01–04 go into the book (cover + 2 sheets); 05–12 stay in the grid below it
-  const albumPhotos = photos.slice(0, 4).map(({ number, name, source, alt, width, height }) => ({
+  // all 12 photos go into the book (wide: cover + 6 double-sided sheets; narrow: cover + 12 single pages)
+  const albumPhotos = photos.map(({ number, name, source, alt, width, height }) => ({
     number,
     name,
     source,
