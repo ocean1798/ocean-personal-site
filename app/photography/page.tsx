@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ResponsivePhoto } from "../components/responsive-photo";
+import { PhotoAlbum } from "../components/album/photo-album";
 import { PcbFooter, PcbNav } from "../components/pcb/pcb-chrome";
 import { withBasePath } from "../lib/site-path";
 import "../pcb.css";
@@ -134,6 +135,17 @@ export default function PhotographyPage() {
     })),
   );
 
+  // all 12 photos go into the book (wide: cover + 6 double-sided sheets; narrow: cover + 12 single pages)
+  const albumPhotos = photos.map(({ number, name, source, alt, width, height }) => ({
+    number,
+    source,
+    alt,
+    width,
+    height,
+    // the book only loads the 900-wide webp (browsers without webp also lack :has() and keep the grid)
+    webp900: withBasePath(`/images/photography/${name}-900.webp`),
+  }));
+
   return (
     <div className="pcb pcb-plain">
       <div className="wrap">
@@ -141,30 +153,32 @@ export default function PhotographyPage() {
         <main id="main-content" className="ph-page">
           <div className="sec-label lit">摄影</div>
           <h1>我眼中的世界</h1>
-          <div className="ph-grid">
-            {photos.map((photo) => (
-              <a
-                className="ph"
-                id={`p${photo.number}`}
-                key={photo.name}
-                href={withBasePath(`/images/photography/${photo.name}-1800.jpg`)}
-              >
-                <span className="ph-ref">
-                  {photo.number} · {photo.source}
-                </span>
-                <span className="ph-frame">
-                  <ResponsivePhoto
-                    name={photo.name}
-                    alt={photo.alt}
-                    width={photo.width}
-                    height={photo.height}
-                    sizes="(max-width: 800px) 50vw, 300px"
-                    loading={photo.number === "01" ? "eager" : "lazy"}
-                  />
-                </span>
-              </a>
-            ))}
-          </div>
+          <PhotoAlbum photos={albumPhotos}>
+            <div className="ph-grid">
+              {photos.map((photo) => (
+                <a
+                  className="ph"
+                  id={`p${photo.number}`}
+                  key={photo.name}
+                  href={withBasePath(`/images/photography/${photo.name}-1800.jpg`)}
+                >
+                  <span className="ph-ref">
+                    {photo.number} · {photo.source}
+                  </span>
+                  <span className="ph-frame">
+                    <ResponsivePhoto
+                      name={photo.name}
+                      alt={photo.alt}
+                      width={photo.width}
+                      height={photo.height}
+                      sizes="(max-width: 800px) 50vw, 300px"
+                      loading={photo.number === "01" ? "eager" : "lazy"}
+                    />
+                  </span>
+                </a>
+              ))}
+            </div>
+          </PhotoAlbum>
         </main>
         <PcbFooter />
       </div>

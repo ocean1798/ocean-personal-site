@@ -416,3 +416,51 @@ body:has(.pcb)::before{display:none}
 .pcb.reduced .ph-frame img,.pcb.reduced .m2-shot img.shot,.pcb.reduced .m2-shot canvas{translate:none;scale:none}
 
 .pcb #pcb-stage{position:fixed;inset:0;z-index:0;pointer-events:none;background:rgb(6,15,11);contain:strict}
+
+/* photography flip-book album (cover + 6 sheets / 12 photos; the static grid is hidden while the book is on). Switched on by <meta name="ph-album"> (see app/photography/layout.tsx);
+   without it (no JS, reduced motion, no :has, album JS not mounted after load) the album stays display:none and the 12-photo grid shows.
+   Book parts are scoped under .album so the generic class names (.book, .leaf) cannot collide elsewhere on the site.
+   Rule: no filter / overflow:hidden / opacity<1 on .book or .leaf (it would flatten the 3D); the filter sits on the img only.
+   (Exception: a fully turned narrow leaf gets opacity:0 from JS; it is flat and out of view by then.) */
+.pcb .album{display:none;position:relative;--turns:var(--album-turns-wide,7);height:calc((var(--turns) + 1) * 100svh);margin:0 calc(-1 * var(--gutter)) 48px}
+@media(max-width:639.98px){.pcb .album{--turns:var(--album-turns-narrow,12)}}
+:root:has(meta[name="ph-album"]) .pcb .ph-page .album{display:block}
+:root:has(meta[name="ph-album"]) .pcb .ph-page .ph-grid{display:none}
+.pcb .album-stage{position:sticky;top:0;height:100svh;display:grid;place-items:center;padding-top:56px;perspective:3200px;perspective-origin:50% 45%;overflow:hidden;
+  background:radial-gradient(ellipse 70% 55% at 50% 55%,rgba(30,70,45,.55),transparent 70%),
+    linear-gradient(rgba(184,255,60,.035) 1px,transparent 1px) 0 0/28px 28px,linear-gradient(90deg,rgba(184,255,60,.035) 1px,transparent 1px) 0 0/28px 28px}
+.pcb .album .book{position:relative;--bw:min(86vw,1060px,calc((100svh - 230px) * 1.6),calc(97svh + 90px));width:var(--bw);aspect-ratio:8/5;transform-style:preserve-3d;
+  transform:var(--album-shift,translateX(-25%)) rotateX(14deg)}
+/* wide: a sheet standing mid-turn leans towards the viewer and, through the book's rotateX tilt, rises above the book;
+   sit the book a little lower, look from slightly higher, and cap its width by the viewport height (97svh + 90px) so the
+   turning sheet stays >=12px clear of the sticky nav (measured 1024x640 .. 2560x1440) */
+@media(min-width:640px){.pcb .album-stage{padding-top:110px;perspective-origin:50% 35%}}
+.pcb .album .book.narrow{width:min(80vw,calc((100svh - 160px) * .8));aspect-ratio:4/5;transform:rotateX(6deg)}
+.pcb .album .book-board{position:absolute;top:-1.2%;bottom:-1.2%;left:50%;right:-1%;border-radius:2px 8px 8px 2px;background:var(--mask);
+  box-shadow:0 2px 0 #08170f,0 40px 60px -20px rgba(0,0,0,.75),0 0 0 1px rgba(224,138,46,.35)}
+.pcb .album .book.narrow .book-board{left:-1%;right:-2%}
+.pcb .album .leaf{position:absolute;top:0;left:50%;width:50%;height:100%;transform-origin:0 50%;transform-style:preserve-3d}
+.pcb .album .book.narrow .leaf{left:0;width:100%}
+.pcb .album .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pcb .album .face.back{transform:rotateY(180deg)}
+.pcb .album .face.paper{display:flex;padding:7% 7% 5.5%;border-radius:1px 4px 4px 1px;
+  background:linear-gradient(90deg,rgba(70,50,25,.24),rgba(70,50,25,.06) 6%,transparent 14%),#f3efe4;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.pcb .album .face.back.paper{border-radius:4px 1px 1px 4px;background:linear-gradient(270deg,rgba(70,50,25,.24),rgba(70,50,25,.06) 6%,transparent 14%),#f3efe4}
+.pcb .album-photo{display:flex;flex-direction:column;gap:10px;width:100%;height:100%;min-height:0}
+.pcb .album .ph-frame{flex:1;min-height:0;aspect-ratio:auto;overflow:visible;background:none;border-radius:0}
+.pcb .album .ph-frame img{object-fit:contain;translate:none;scale:none;transition:none;filter:saturate(.85) sepia(.08) brightness(1.06) contrast(.98);user-select:none}
+.pcb .album-ref{font:600 11px/1.2 ui-monospace,monospace;letter-spacing:.06em;color:#5b6a5f;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcb .album .face.cover{border-radius:2px 8px 8px 2px;display:grid;place-items:center;color:var(--silk);
+  background:radial-gradient(circle at 30% 25%,rgba(184,255,60,.08),transparent 55%),
+    repeating-linear-gradient(90deg,transparent 0 46px,rgba(224,138,46,.16) 46px 48px),
+    repeating-linear-gradient(0deg,transparent 0 70px,rgba(224,138,46,.1) 70px 72px),var(--mask);
+  box-shadow:inset 0 0 0 2px rgba(224,138,46,.55),inset 14px 0 18px -10px rgba(0,0,0,.6)}
+.pcb .album .cover-title{display:grid;justify-items:center;gap:6px;padding:18px 26px;border:1.5px solid rgba(238,242,234,.75);border-radius:4px;background:rgba(5,12,9,.55)}
+.pcb .album .cover-title b{font:900 clamp(26px,4.2vw,54px)/1 ui-monospace,monospace;letter-spacing:.18em;color:var(--silk)}
+.pcb .album .cover-title i{font:500 clamp(10px,1vw,13px) ui-monospace,monospace;font-style:normal;letter-spacing:.42em;color:var(--cu2)}
+.pcb .album .cover-silk{position:absolute;left:10%;bottom:6%;font:11px ui-monospace,monospace;letter-spacing:.12em;color:rgba(238,242,234,.6)}
+.pcb .album .cover-pad{position:absolute;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle,#030806 0 3px,var(--cu) 3.5px)}
+.pcb .album .cover-pad.tl{left:6%;top:5%}.pcb .album .cover-pad.tr{right:6%;top:5%}.pcb .album .cover-pad.bl{left:6%;bottom:12%}.pcb .album .cover-pad.br{right:6%;bottom:5%}
+.pcb .album .face.endpaper{border-radius:8px 2px 2px 8px;display:grid;place-items:center;
+  background:linear-gradient(270deg,rgba(0,0,0,.35),transparent 12%),repeating-linear-gradient(45deg,transparent 0 10px,rgba(184,255,60,.05) 10px 11px),#10291b}
+.pcb .album .endpaper-mark{font:600 14px ui-monospace,monospace;letter-spacing:.3em;color:rgba(246,192,106,.75)}
