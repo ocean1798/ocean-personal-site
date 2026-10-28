@@ -7,13 +7,11 @@ import { ALBUM_GATE_META, REDUCE_QUERY } from "./album-gate";
 
 export type AlbumPhoto = {
   number: string; // "01"
-  name: string;
   source: string;
   alt: string;
   width: number;
   height: number;
   webp900: string; // already passed through withBasePath() on the server (page.tsx)
-  jpg1800: string;
 };
 
 type Props = {
@@ -23,9 +21,31 @@ type Props = {
 
 const WIDE_QUERY = "(min-width: 640px)";
 
-// Compositing: a leaf is only promoted (will-change: transform) while it is actually turning (0 < f < 1).
-// The trial measured this against keeping every leaf promoted: same frame times, but less layerize/raster work and
-// fewer GPU layers held (13 leaves on narrow screens), so the lighter "while turning" mode is the only one kept.
+// The hash (#pNN) is honoured once per document load of this page; a reload of this very page keeps the browser's
+// own scroll restoration instead (A12). Module scope = per document.
+let initialHashHandled = false;
+
+/** true when this mount is the page the browser itself (re)loaded, not a client-side navigation into it */
+function isReloadOfThisPage() {
+  const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  if (!nav || nav.type !== "reload") return false;
+  // after a client-side navigation the entry still describes the document that was first loaded (e.g. the home page)
+  try {
+    const a = new URL(nav.name);
+    return a.origin === location.origin && a.pathname === location.pathname;
+  } catch {
+    return false;
+  }
+}
+
+/** the photo (1-based, 0 = cover) that spread k shows; keeps `prev` while it is still on that spread */
+function photoOnSpread(k: number, wide: boolean, count: number, prev: number) {
+  const onSpread = wide ? [2 * k - 2, 2 * k - 1] : [k];
+  const valid = onSpread.filter((n) => n >= 1 && n <= count);
+  if (!valid.length) return 0;
+  return valid.includes(prev) ? prev : valid[0];
+}
+
 function ensureGate(on: boolean) {
   const existing = document.head.querySelector(`meta[name="${ALBUM_GATE_META}"]`);
   if (on && !existing) {
@@ -57,6 +77,9 @@ export function PhotoAlbum({ photos, children }: Props) {
   const leavesRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const count = photos.length;
+  // last known reading position, kept across re-measures and wide/narrow switches (A13):
+  // p = progress through the scroller, photo = the photo being looked at, inView = book near the viewport
+  const posRef = useRef<{ p: number; photo: number; inView: boolean } | null>(null);
   const wide = mode === "wide";
   // number of leaves that turn
   const T = wide ? Math.ceil(count / 2) + 1 : count;
@@ -109,7 +132,8 @@ export function PhotoAlbum({ photos, children }: Props) {
   );
 
   // ---- per-frame page turning on the shared frame-bus ----
-  useEffect(() => {
+  // layout effect: after a wide/narrow switch the new book is put back on the same photo before it is painted
+  useLayoutEffect(() => {
     if (mode !== "wide" && mode !== "narrow") return;
     const sc = scrollerRef.current;
     const book = bookRef.current;
@@ -117,7 +141,10 @@ export function PhotoAlbum({ photos, children }: Props) {
     const isWide = mode === "wide";
     const leaves = leavesRef.current.slice(0, isWide ? T : count + 1).filter(Boolean) as HTMLDivElement[];
     const L = leaves.length;
-    const cache = leaves.map(() => ({ tr: "", wc: "", vis: "" }));
+    const cache = leaves.map(() => ({ tr: "", wc: "", op: "" }));
+    const wideMq = matchMedia(WIDE_QUERY);
+    // between a media-query flip and React re-rendering the other book, this (old) loop must not read or write
+    const stale = () => wideMq.matches !== isWide;
     let bookTr = "";
     let lastY = NaN;
     let lastTop = NaN;
@@ -138,16 +165,18 @@ export function PhotoAlbum({ photos, children }: Props) {
           c.tr = tr;
           el.style.transform = tr;
         }
+        // compositing: only the leaf that is actually turning is promoted
         const w = f > 0 && f < 1 ? "transform" : "auto";
         if (c.wc !== w) {
           c.wc = w;
           el.style.willChange = w;
         }
-        // narrow: a fully turned single page would sit off to the left of the screen; take it out of view
-        const vis = !isWide && f >= 1 ? "hidden" : "";
-        if (c.vis !== vis) {
-          c.vis = vis;
-          el.style.visibility = vis;
+        // narrow: a fully turned single page would sit off to the left of the screen; make it transparent.
+        // Not visibility:hidden, which would drop its photo and alt text from the accessibility tree.
+        const op = !isWide && f >= 1 ? "0" : "";
+        if (c.op !== op) {
+          c.op = op;
+          el.style.opacity = op;
         }
       }
       // wide: the closed book shows only its right half, so slide it left by a quarter to centre it
@@ -170,20 +199,54 @@ export function PhotoAlbum({ photos, children }: Props) {
       }
     };
 
+    let running = false; // book near the viewport (IntersectionObserver below)
+
+    // apply the turn for scroll position y and remember where the reader is
+    const update = (y: number) => {
+      const p = (y - geom.current.top) / geom.current.range;
+      const t = tFromP(p, T);
+      apply(t);
+      const prev = posRef.current;
+      posRef.current = {
+        p,
+        photo: photoOnSpread(Math.round(t), isWide, count, prev ? prev.photo : 0),
+        inView: running,
+      };
+    };
+
     const tick = () => {
+      if (stale()) return;
       const y = FB.y;
       const { top, range } = geom.current;
       if (y === lastY && top === lastTop && range === lastRange) return; // nothing moved: no writes
       lastY = y;
       lastTop = top;
       lastRange = range;
-      apply(tFromP((y - top) / range, T));
+      update(y);
     };
 
-    // first paint without waiting for the loop
-    apply(tFromP((window.scrollY - geom.current.top) / geom.current.range, T));
+    // Re-measure after a size change and put the reader back where they were (A13): same mode -> same progress,
+    // after a wide/narrow switch -> the spread/page holding the same photo. Only while the book is (near) on screen;
+    // above or below it the browser's own scroll anchoring keeps the place.
+    const remeasure = (switched: boolean) => {
+      if (stale()) return;
+      const before = posRef.current;
+      measure();
+      lastY = NaN;
+      if (!before || !before.inView || before.p <= 0 || before.p >= 1) return;
+      const { top, range } = geom.current;
+      let p = before.p;
+      if (switched) p = before.photo > 0 ? pFromT(spreadOfPhoto(before.photo, isWide), T) : 0;
+      const y = Math.round(top + p * range);
+      if (Math.abs(y - window.scrollY) > 1) window.scrollTo({ top: y, behavior: "instant" });
+      posRef.current = { ...before, p: (y - top) / range };
+    };
 
-    let running = false;
+    // this book replaces the other-mode one: go back to the same photo (no-op on first mount)
+    if (posRef.current) remeasure(true);
+    // first paint without waiting for the loop
+    update(window.scrollY);
+
     const io = new IntersectionObserver(
       (entries) => {
         const vis = entries.some((e) => e.isIntersecting);
@@ -195,23 +258,17 @@ export function PhotoAlbum({ photos, children }: Props) {
           running = false;
           fbStop(tick);
           // settle exactly at either end when leaving the scroller quickly
-          apply(tFromP((window.scrollY - geom.current.top) / geom.current.range, T));
+          if (!stale()) update(window.scrollY);
         }
       },
       { rootMargin: "50% 0px" },
     );
     io.observe(sc);
 
-    const ro = new ResizeObserver(() => {
-      measure();
-      lastY = NaN;
-    });
+    const ro = new ResizeObserver(() => remeasure(false));
     ro.observe(sc);
     ro.observe(document.body);
-    const onResize = () => {
-      measure();
-      lastY = NaN;
-    };
+    const onResize = () => remeasure(false);
     window.addEventListener("resize", onResize);
 
     return () => {
@@ -222,12 +279,17 @@ export function PhotoAlbum({ photos, children }: Props) {
     };
   }, [mode, T, count, measure]);
 
-  // ---- #pNN: direct loads and in-page / router hash changes ----
+  // ---- #pNN: once when the page is opened (direct load or client navigation), then on hash changes ----
+  // Not on a later wide/narrow switch: that keeps the current photo instead (see remeasure).
+  const hashDone = useRef(false);
   useEffect(() => {
     if (mode !== "wide" && mode !== "narrow") return;
-    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-    // on reload, keep the browser's scroll restoration (A12) instead of re-jumping to the hash
-    if (location.hash && nav?.type !== "reload") {
+    if (hashDone.current) return;
+    hashDone.current = true;
+    // the browser's own reload of this page keeps its scroll restoration (A12) instead of re-jumping to the hash
+    const keepRestored = !initialHashHandled && isReloadOfThisPage();
+    initialHashHandled = true;
+    if (location.hash && !keepRestored) {
       if (jumpToHash(location.hash)) {
         // the router / browser may still try its own (no-op, hidden) anchor scroll after mount; re-assert once
         const id = requestAnimationFrame(() => jumpToHash(location.hash));
@@ -317,11 +379,11 @@ function Page({ photo, side, load }: { photo: AlbumPhoto; side: "front" | "back"
     <div className={`face ${side} paper`}>
       <figure className="album-photo">
         <span className="ph-frame">
-          {/* same picture markup / class as responsive-photo.tsx, but src is only filled in on demand */}
+          {/* same class as responsive-photo.tsx, but src is only filled in on demand */}
           <picture className="responsive-photo">
-            <source type="image/webp" srcSet={load ? photo.webp900 : undefined} />
+            {/* webp only: a browser without webp also lacks :has(), so it never gets the book */}
             <img
-              src={load ? photo.jpg1800 : undefined}
+              src={load ? photo.webp900 : undefined}
               alt={photo.alt}
               width={photo.width}
               height={photo.height}

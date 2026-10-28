@@ -138,14 +138,12 @@ export default function PhotographyPage() {
   // all 12 photos go into the book (wide: cover + 6 double-sided sheets; narrow: cover + 12 single pages)
   const albumPhotos = photos.map(({ number, name, source, alt, width, height }) => ({
     number,
-    name,
     source,
     alt,
     width,
     height,
-    // the book loads the 900-wide webp; the 1800 jpeg is only the <img> fallback for browsers without webp
+    // the book only loads the 900-wide webp (browsers without webp also lack :has() and keep the grid)
     webp900: withBasePath(`/images/photography/${name}-900.webp`),
-    jpg1800: withBasePath(`/images/photography/${name}-1800.jpg`),
   }));
 
   return (
