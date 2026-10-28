@@ -228,15 +228,28 @@ export function PhotoAlbum({ photos, children }: Props) {
     // Re-measure after a size change and put the reader back where they were (A13): same mode -> same progress,
     // after a wide/narrow switch -> the spread/page holding the same photo. Only while the book is (near) on screen;
     // above or below it the browser's own scroll anchoring keeps the place.
+    // Same mode: the progress is read from the live scrollY against the geometry from before this re-measure, never
+    // from the last frame tick (a resize can land between a scroll and the next frame, e.g. a phone's address bar
+    // showing/hiding mid-swipe), and nothing is scrolled at all when the geometry did not change.
     const remeasure = (switched: boolean) => {
       if (stale()) return;
       const before = posRef.current;
+      const oldTop = geom.current.top;
+      const oldRange = geom.current.range;
+      const y0 = window.scrollY;
       measure();
       lastY = NaN;
-      if (!before || !before.inView || before.p <= 0 || before.p >= 1) return;
+      if (!before || !before.inView) return;
       const { top, range } = geom.current;
-      let p = before.p;
-      if (switched) p = before.photo > 0 ? pFromT(spreadOfPhoto(before.photo, isWide), T) : 0;
+      let p: number;
+      if (switched) {
+        if (before.p <= 0 || before.p >= 1) return;
+        p = before.photo > 0 ? pFromT(spreadOfPhoto(before.photo, isWide), T) : 0;
+      } else {
+        if (top === oldTop && range === oldRange) return; // nothing to correct: leave the scroll alone
+        p = (y0 - oldTop) / oldRange;
+        if (p <= 0 || p >= 1) return;
+      }
       const y = Math.round(top + p * range);
       if (Math.abs(y - window.scrollY) > 1) window.scrollTo({ top: y, behavior: "instant" });
       posRef.current = { ...before, p: (y - top) / range };
