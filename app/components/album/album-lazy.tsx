@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ensureAlbumGate, albumGateShouldBeOn } from "./album-gate";
 import type { AlbumPhoto, PhotoAlbum } from "./photo-album";
 
 type Props = {
@@ -12,6 +13,10 @@ type Props = {
  * Keeps the reserved-height .album shell (and the server-rendered grid) in the HTML,
  * and only loads the flip-book chunk when the section is near the viewport or the URL
  * is already #pNN. Once loaded, the book is never unloaded.
+ *
+ * The gate meta is asserted here (not only inside PhotoAlbum) so a client-side
+ * navigation onto the home page still reserves the album height before paint.
+ * The inline script does not run on client navigations.
  */
 export function AlbumLazy({ photos, children }: Props) {
   const [Book, setBook] = useState<null | typeof PhotoAlbum>(null);
@@ -19,6 +24,8 @@ export function AlbumLazy({ photos, children }: Props) {
   const shellRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    ensureAlbumGate(albumGateShouldBeOn());
+
     const load = () => {
       if (started.current) return;
       started.current = true;

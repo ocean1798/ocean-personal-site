@@ -9,9 +9,41 @@ export const REDUCE_QUERY = "(prefers-reduced-motion: reduce)";
 // if the book has not been drawn 3 s after load (e.g. a JS chunk failed), or 6 s after
 // this timer was armed at the latest, drop the meta so the static grid shows instead of
 // a blank area. Timers must not start while the visitor is still on the hero.
-// When the album does mount later it re-adds the meta itself (photo-album.tsx, ensureGate).
+// When the album shell or book mounts later it re-adds the meta itself (AlbumLazy / PhotoAlbum).
 export const ALBUM_FALLBACK_MS = 3000;
 export const ALBUM_FALLBACK_CAP_MS = 6000;
+
+
+export function supportsHas() {
+  try {
+    return CSS.supports("selector(:has(a))");
+  } catch {
+    return false;
+  }
+}
+
+export function albumGateShouldBeOn() {
+  if (typeof window === "undefined") return false;
+  try {
+    return !matchMedia(REDUCE_QUERY).matches && supportsHas();
+  } catch {
+    return false;
+  }
+}
+
+/** Add or remove the <meta name="ph-album"> gate. Safe to call more than once. */
+export function ensureAlbumGate(on: boolean) {
+  if (typeof document === "undefined") return;
+  const existing = document.head.querySelector(`meta[name="${ALBUM_GATE_META}"]`);
+  if (on && !existing) {
+    const m = document.createElement("meta");
+    m.name = ALBUM_GATE_META;
+    m.content = "on";
+    document.head.appendChild(m);
+  } else if (!on && existing) {
+    existing.remove();
+  }
+}
 
 export const albumGateScript = [
   "(function(){try{",

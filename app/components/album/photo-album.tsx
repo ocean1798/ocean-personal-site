@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { S as FB, run as fbRun, stop as fbStop } from "../pcb/frame-bus.js";
 import { alignSmoothScroll } from "../pcb/smooth-scroll-sync.js";
 import { clamp01, pFromT, photosToLoad, spreadOfPhoto, tFromP } from "./album-math";
-import { ALBUM_GATE_META, REDUCE_QUERY } from "./album-gate";
+import { REDUCE_QUERY, ensureAlbumGate, supportsHas } from "./album-gate";
 
 export type AlbumPhoto = {
   number: string; // "01"
@@ -47,26 +47,6 @@ function photoOnSpread(k: number, wide: boolean, count: number, prev: number) {
   return valid.includes(prev) ? prev : valid[0];
 }
 
-function ensureGate(on: boolean) {
-  const existing = document.head.querySelector(`meta[name="${ALBUM_GATE_META}"]`);
-  if (on && !existing) {
-    const m = document.createElement("meta");
-    m.name = ALBUM_GATE_META;
-    m.content = "on";
-    document.head.appendChild(m);
-  } else if (!on && existing) {
-    existing.remove();
-  }
-}
-
-function supportsHas() {
-  try {
-    return CSS.supports("selector(:has(a))");
-  } catch {
-    return false;
-  }
-}
-
 export function PhotoAlbum({ photos, children }: Props) {
   // null until mounted: the server HTML and the first client render are the same empty shell (no hydration diff)
   const [mode, setMode] = useState<null | "off" | "wide" | "narrow">(null);
@@ -92,7 +72,7 @@ export function PhotoAlbum({ photos, children }: Props) {
     const decide = () => {
       const on = !reduce.matches && supportsHas();
       // client-side navigations do not execute the inline head script, so (re)assert the gate here, before paint
-      ensureGate(on);
+      ensureAlbumGate(on);
       setMode(on ? (wideMq.matches ? "wide" : "narrow") : "off");
     };
     decide();
@@ -101,7 +81,7 @@ export function PhotoAlbum({ photos, children }: Props) {
     return () => {
       reduce.removeEventListener("change", decide);
       wideMq.removeEventListener("change", decide);
-      ensureGate(false);
+      ensureAlbumGate(false);
     };
   }, []);
 

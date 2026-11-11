@@ -23,15 +23,15 @@ function run(f,first){ if(disposed)return; const g=(t,dt)=>disposed?false:f(t,dt
 let target=scrollY,current=scrollY,smoothing=false;
 let albumPause=false;
 const alignNow=()=>{ smoothing=false; target=current=window.scrollY; };
-const setAlbumPause=(on)=>{ albumPause=!!on; if(on) alignNow(); };
+const setAlbumPause=(on)=>{ albumPause=!!on; };  // do not alignNow / abort an in-flight section scroll
 setSmoothScrollAlign(alignNow);
 setSmoothScrollPauseHook(setAlbumPause);
 cleanups.push(()=>{ setSmoothScrollAlign(null); setSmoothScrollPauseHook(null); });
 const ssOn=()=>P.ss&&!albumPause;
 const jump=y=>window.scrollTo({top:y,left:0,behavior:'instant'});   // html has scroll-behavior:smooth
 let maxS=0; const measureMax=()=>{maxS=document.documentElement.scrollHeight-innerHeight;}; const maxScroll=()=>maxS||(measureMax(),maxS);
-function ssStep(){ if(!ssOn()){smoothing=false;return false;} current+=(target-current)*P.lerp; const done=Math.abs(target-current)<.5; if(done)current=target; const y=Math.round(current*2)/2; if(y!==FB.y){ jump(y); FB.y=y; } if(done){smoothing=false;return false;} }   // write-only; runs first in the frame
-function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!ssOn()){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep,true);} }
+function ssStep(){ if(!P.ss){smoothing=false;return false;} current+=(target-current)*P.lerp; const done=Math.abs(target-current)<.5; if(done)current=target; const y=Math.round(current*2)/2; if(y!==FB.y){ jump(y); FB.y=y; } if(done){smoothing=false;return false;} }   // write-only; runs first in the frame
+function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!P.ss){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep,true);} }
 function innerScrollable(el,dy){ for(;el&&el!==document.body&&el!==document.documentElement;el=el.parentElement){
   const s=getComputedStyle(el); if(/(auto|scroll)/.test(s.overflowY)&&el.scrollHeight>el.clientHeight+1){ if((dy>0&&el.scrollTop+el.clientHeight<el.scrollHeight-1)||(dy<0&&el.scrollTop>0))return true; } } return false; }
 on(window,'wheel',e=>{ if(!ssOn()||e.ctrlKey||e.defaultPrevented)return;
@@ -55,7 +55,7 @@ on(document,'click',e=>{ if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlK
     window.dispatchEvent(new Event('hashchange'));
     return;
   }
-  if(!ssOn())return;
+  if(!P.ss)return;
   const id=href.slice(1); const el=id?document.getElementById(id):null; if(!el)return;
   e.preventDefault(); history.replaceState(null,'','#'+id); scrollToY(el.getBoundingClientRect().top+scrollY-70); });
 
