@@ -95,11 +95,8 @@ function assertPluginEvidenceContract(html, pathname) {
 const HOME_SECTIONS = [
   ["work", "01 · 本职工作"],
   ["plugins", "02 · 个人插件"],
-  ["more", "03 · 其它项目"],
-  ["tools", "04 · 最近在用"],
-  ["music", "05 · 音乐"],
-  ["photo", "06 · 摄影"],
-  ["contact", "07 · 联系"],
+  ["photography", "03 · 摄影"],
+  ["contact", "04 · 联系"],
 ];
 
 test("renders the PCB hero with name, avatar, tagline and board attribution", async () => {
@@ -116,6 +113,7 @@ test("renders the PCB hero with name, avatar, tagline and board attribution", as
   assert.match(html, /class="board-credit" href="#board-credit">背景板 ↗/);
   assert.match(html, /id="board-credit"/);
   assert.doesNotMatch(html, /chip-tag|class="attrib"|Ocean · 产品经理/);
+  assert.doesNotMatch(html, /业余用 AI 做 EDA 插件/);
   assert.match(html, /https:\/\/oshwhub\.com\/oshwhub\/dian-nao-zhu-ban/);
   assert.match(html, /GPL-3\.0/);
   assert.doesNotMatch(html, /__pcb/);
@@ -135,9 +133,11 @@ test("renders every home section in order with matching nav anchors", async () =
 
   const navStart = html.indexOf('class="pcb-nav"');
   const nav = html.slice(navStart, html.indexOf("</nav>", navStart));
-  for (const route of ["/work/", "/about/", "/photography/"]) {
-    assert.ok(nav.includes(`href="${route}"`), `nav should link ${route}`);
+  for (const href of ["#work", "#plugins", "#photography", "#contact"]) {
+    assert.ok(nav.includes(`href="${href}"`), `nav should link ${href}`);
   }
+  assert.doesNotMatch(nav, /href="\/work\/|href="\/photography\/|#more|#tools|#music/);
+  assert.doesNotMatch(html, /03 · 其它项目|04 · 最近在用|05 · 音乐/);
 });
 
 test("lists the three plugins with store links and an honest AI role", async () => {
@@ -157,19 +157,17 @@ test("lists the three plugins with store links and an honest AI role", async () 
   assert.doesNotMatch(html, /stars?\b|★/i);
 });
 
-test("shows the real playlist tracks and the tools in use", async () => {
+test("puts the flip-book album and its 12-photo grid on the home page", async () => {
   const html = await render("/");
 
-  assert.match(html, /href="https:\/\/music\.163\.com\/playlist\?id=12243639089"/);
-  assert.match(html, /<canvas id="scope"/);
-  assert.equal((html.match(/<li><a href="https:\/\/music\.163\.com\/song\?id=\d+"/g) ?? []).length, 8);
-  for (const title of ["Where Is the Love", "知足", "夜的尽头"]) {
-    assert.ok(html.includes(title), `missing track ${title}`);
-  }
-  for (const tool of ["Codex", "Pi Agent", "CPA Manager Plus", "Grok Bot"]) {
-    assert.ok(html.includes(`<b>${tool}</b>`), `missing tool ${tool}`);
-  }
-  assert.match(html, /https:\/\/github\.com\/seakee\/CPA-Manager-Plus/);
+  assert.match(html, /id="photography"/);
+  assert.match(html, /id="photo"/);
+  assert.match(html, /<h2>我眼中的世界<\/h2>/);
+  assert.equal((html.match(/class="ph" id="p\d\d"/g) ?? []).length, 12);
+  assert.match(html, /class="album"/);
+  assert.match(html, /id="ph-album-gate"/);
+  assert.doesNotMatch(html, /全部 12 张/);
+  assert.doesNotMatch(html, /href="https:\/\/music\.163\.com\/playlist/);
 });
 
 test("uses the duck.com contact address everywhere", async () => {

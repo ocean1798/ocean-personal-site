@@ -81,11 +81,12 @@ test("prefixes framework assets, links, and public images with the repository pa
 
   const home = pages[0];
   assert.match(home, new RegExp(`href="${basePath}/"`));
-  assert.match(home, new RegExp(`href="${basePath}/work/"`));
-  assert.match(home, new RegExp(`href="${basePath}/about/"`));
-  assert.match(home, new RegExp(`href="${basePath}/photography/"`));
+  assert.match(home, new RegExp(`href="${basePath}/work/"`)); // still in the work section "了解更多"
+  assert.match(home, new RegExp(`id="photography"`));
+  assert.match(home, new RegExp(`href="#photography"`));
   assert.match(home, new RegExp(`src="${basePath}/images/plugins/diff-pair-radar.png"`));
-  assert.match(home, new RegExp(`src="${basePath}/images/music/28828076.jpg"`));
+  assert.match(home, new RegExp(`src="${basePath}/images/photography/lines-red-installation-1800.jpg"`));
+  assert.doesNotMatch(home, /images\/music\/28828076/);
   assert.doesNotMatch(home, /__pcb/);
 });
 

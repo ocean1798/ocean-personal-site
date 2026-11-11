@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { S as FB, run as fbRun, stop as fbStop } from "../pcb/frame-bus.js";
+import { alignSmoothScroll } from "../pcb/smooth-scroll-sync.js";
 import { clamp01, pFromT, photosToLoad, spreadOfPhoto, tFromP } from "./album-math";
 import { ALBUM_GATE_META, REDUCE_QUERY } from "./album-gate";
 
@@ -117,15 +118,18 @@ export function PhotoAlbum({ photos, children }: Props) {
 
   const jumpToHash = useCallback(
     (hash: string) => {
-      const m = /^#p(\d\d)$/.exec(hash);
+      const m = /^#p(\d{1,2})$/.exec(hash);
       if (!m || (mode !== "wide" && mode !== "narrow")) return false;
-      const idx = photos.findIndex((ph) => ph.number === m[1]);
+      const number = m[1].padStart(2, "0");
+      const idx = photos.findIndex((ph) => ph.number === number);
       if (idx < 0) return false; // not in the book: the grid anchor handles it natively
       measure();
       const p = pFromT(spreadOfPhoto(idx + 1, mode === "wide"), T);
       const top = Math.round(geom.current.top + p * geom.current.range);
       // instant: globals.css sets scroll-behavior:smooth, which would otherwise riffle through every page
       window.scrollTo({ top, behavior: "instant" });
+      // home page lerp scroll otherwise keeps its old target and pulls the book back
+      alignSmoothScroll();
       return true;
     },
     [mode, photos, T, measure],

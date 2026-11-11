@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { withBasePath } from "../../lib/site-path";
 import { initPcbHome } from "../pcb-home-runtime.js";
 import { initMotion2 } from "./motion-batch2.js";
+import { AlbumGateScript } from "../album/album-gate-script";
 
 /** Fixed PCB canvas background + client behaviour for the home page. */
 export function PcbHomeShell({ children }: { children: ReactNode }) {
@@ -21,6 +22,7 @@ export function PcbHomeShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="pcb" ref={rootRef}>
+      <AlbumGateScript />
       <canvas id="pcb" className="wait" aria-hidden="true"></canvas>
       <div id="pcb-load" aria-hidden="true">
         <i></i>正在加载电路板

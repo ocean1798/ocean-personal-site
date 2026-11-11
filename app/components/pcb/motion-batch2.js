@@ -5,6 +5,7 @@
 /** @param {HTMLElement} root .pcb wrapper  @returns {() => void} cleanup */
 import { initBgParallax } from './bg-parallax.js';
 import { S as FB, run as fbRun } from './frame-bus.js';
+import { setSmoothScrollAlign, setSmoothScrollPauseHook } from './smooth-scroll-sync.js';
 
 export function initMotion2(root){
 const cleanups=[]; let disposed=false;
@@ -20,25 +21,51 @@ function run(f,first){ if(disposed)return; const g=(t,dt)=>disposed?false:f(t,dt
 
 /* 1. lerp smooth scroll */
 let target=scrollY,current=scrollY,smoothing=false;
+let albumPause=false;
+const alignNow=()=>{ smoothing=false; target=current=window.scrollY; };
+const setAlbumPause=(on)=>{ albumPause=!!on; if(on) alignNow(); };
+setSmoothScrollAlign(alignNow);
+setSmoothScrollPauseHook(setAlbumPause);
+cleanups.push(()=>{ setSmoothScrollAlign(null); setSmoothScrollPauseHook(null); });
+const ssOn=()=>P.ss&&!albumPause;
 const jump=y=>window.scrollTo({top:y,left:0,behavior:'instant'});   // html has scroll-behavior:smooth
 let maxS=0; const measureMax=()=>{maxS=document.documentElement.scrollHeight-innerHeight;}; const maxScroll=()=>maxS||(measureMax(),maxS);
-function ssStep(){ if(!P.ss){smoothing=false;return false;} current+=(target-current)*P.lerp; const done=Math.abs(target-current)<.5; if(done)current=target; const y=Math.round(current*2)/2; if(y!==FB.y){ jump(y); FB.y=y; } if(done){smoothing=false;return false;} }   // write-only; runs first in the frame
-function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!P.ss){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep,true);} }
+function ssStep(){ if(!ssOn()){smoothing=false;return false;} current+=(target-current)*P.lerp; const done=Math.abs(target-current)<.5; if(done)current=target; const y=Math.round(current*2)/2; if(y!==FB.y){ jump(y); FB.y=y; } if(done){smoothing=false;return false;} }   // write-only; runs first in the frame
+function scrollToY(y){ target=clamp(y,0,maxScroll()); if(!ssOn()){window.scrollTo({top:target,behavior:RM?'auto':'smooth'});return;} if(!smoothing){current=scrollY;smoothing=true;run(ssStep,true);} }
 function innerScrollable(el,dy){ for(;el&&el!==document.body&&el!==document.documentElement;el=el.parentElement){
   const s=getComputedStyle(el); if(/(auto|scroll)/.test(s.overflowY)&&el.scrollHeight>el.clientHeight+1){ if((dy>0&&el.scrollTop+el.clientHeight<el.scrollHeight-1)||(dy<0&&el.scrollTop>0))return true; } } return false; }
-on(window,'wheel',e=>{ if(!P.ss||e.ctrlKey||e.defaultPrevented)return;
+on(window,'wheel',e=>{ if(!ssOn()||e.ctrlKey||e.defaultPrevented)return;
   const d=e.deltaMode===1?e.deltaY*40:e.deltaMode===2?e.deltaY*innerHeight:e.deltaY;
   if(!d||Math.abs(e.deltaX)>Math.abs(e.deltaY)||innerScrollable(e.target,d))return;
   e.preventDefault(); if(!smoothing)current=target=scrollY; scrollToY(target+d); },{passive:false});
 let trQ=false; on(window,'scroll',()=>{ if(!smoothing)target=current=scrollY; if(!trQ){trQ=true; run(()=>{trQ=false; onScroll(); return false;});} },{passive:true});
-on(window,'keydown',e=>{ if(!P.ss||e.altKey||e.ctrlKey||e.metaKey)return; const a=document.activeElement;
+on(window,'keydown',e=>{ if(!ssOn()||e.altKey||e.ctrlKey||e.metaKey)return; const a=document.activeElement;
   if(a&&(/INPUT|TEXTAREA|SELECT|BUTTON|SUMMARY|IFRAME/.test(a.tagName)||a.isContentEditable||a.closest('[role=button]')))return;
   const m={PageDown:innerHeight*.9,PageUp:-innerHeight*.9,ArrowDown:90,ArrowUp:-90,' ':e.shiftKey?-innerHeight*.9:innerHeight*.9};
   if(e.key in m){e.preventDefault(); if(!smoothing)current=target=scrollY; scrollToY(target+m[e.key]);}
   else if(e.key==='Home'||e.key==='End'){e.preventDefault(); scrollToY(e.key==='Home'?0:maxScroll());} });
-on(document,'click',e=>{ if(!P.ss||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;
-  const a=e.target.closest&&e.target.closest('a[href^="#"]'); if(!a)return; const id=a.getAttribute('href').slice(1); const el=id?document.getElementById(id):null; if(!el)return;
+on(document,'click',e=>{ if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;
+  const a=e.target.closest&&e.target.closest('a[href^="#"]'); if(!a)return;
+  const href=a.getAttribute('href')||'';
+  if(/^#p\d{1,2}$/.test(href)){
+    e.preventDefault();
+    const next='#p'+href.slice(2).padStart(2,'0');
+    if(location.hash!==next) history.replaceState(null,'',next);
+    alignNow();
+    window.dispatchEvent(new Event('hashchange'));
+    return;
+  }
+  if(!ssOn())return;
+  const id=href.slice(1); const el=id?document.getElementById(id):null; if(!el)return;
   e.preventDefault(); history.replaceState(null,'','#'+id); scrollToY(el.getBoundingClientRect().top+scrollY-70); });
+
+/* pause lerp smooth scroll while the mid-page album is on screen */
+const albumRoot=root.querySelector('#photography')||root.querySelector('.album');
+if(albumRoot){
+  const albumIO=new IntersectionObserver(ents=>{ setAlbumPause(ents.some(e=>e.isIntersecting)); },{rootMargin:'0px'});
+  albumIO.observe(albumRoot);
+  cleanups.push(()=>albumIO.disconnect());
+}
 
 /* 2. trace progress bar */
 const trace=document.createElement('nav'); trace.id='m2-trace'; trace.setAttribute('aria-label','页面进度');

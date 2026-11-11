@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { withBasePath } from "../../lib/site-path";
+import { ResponsivePhoto } from "../responsive-photo";
+import { AlbumLazy } from "../album/album-lazy";
+import { SITE_PHOTOS, albumPhotosFrom, photoNumber } from "../album/photo-data";
 import { CONTACT_EMAIL } from "./pcb-chrome";
 
 const HEADLINE = ["让噪声化为秩序，", "让想法长出形状。"];
@@ -33,7 +36,6 @@ export function Hero() {
           </span>
         ))}
       </p>
-      <p className="id-sub">业余用 AI 做 EDA 插件。</p>
       <div className="cta">
         <a className="btn btn-cu" href="#plugins">看我的插件</a>
         <a className="btn btn-neon" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
@@ -217,143 +219,45 @@ export function PluginsSection() {
   );
 }
 
-const PROJECTS = [
-  ["CellHive", "4G 模组变短信网关，验证码直接进剪贴板。", "https://github.com/ocean1798/CellHive", "GitHub ↗"],
-  ["AirTrack Pro", "Air8202G 轨迹看板，网页、APK、小程序一套代码。", "https://ocean1798.github.io/Air8202G-AirTrack-Pro/", "在线体验 ↗"],
-  ["doc-translate", "Word 技术文档中译英，格式和术语都不跑偏。", "https://github.com/ocean1798/doc-translate", "GitHub ↗"],
-];
-
-export function MoreSection() {
-  return (
-    <section className="board-sec" id="more">
-      <div className="sec-label" data-lit>03 · 其它项目</div>
-      <h2>工作之外，也在折腾。</h2>
-      <div className="bento">
-        {PROJECTS.map(([name, line, href, go]) => (
-          <a key={name} className="mod component" data-comp style={{ margin: 0 }} href={href} target="_blank" rel="noopener">
-            <h3>{name}</h3>
-            <p>{line}</p>
-            <span className="go">{go}</span>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-const TOOLS: { code: string; name: string; line: string; href?: string }[] = [
-  { code: "U1 · CODEX", name: "Codex", line: "OpenAI 的编码 agent，读写代码、跑命令。", href: "https://openai.com/codex/" },
-  { code: "U2 · PI", name: "Pi Agent", line: "Mario Zechner 写的极简终端编码 agent，可用 TypeScript 扩展。", href: "https://github.com/badlogic/pi-mono" },
-  { code: "U3 · CPAMP", name: "CPA Manager Plus", line: "CLIProxyAPI 的自托管管理面板：请求、用量、成本、账号健康。", href: "https://github.com/seakee/CPA-Manager-Plus" },
-  { code: "U4 · GROK", name: "Grok Bot", line: "帮我跑杂活的 AI 助手，这个页面也是它一起做的。" },
-];
-
-export function ToolsSection() {
-  return (
-    <section className="board-sec" id="tools">
-      <div className="sec-label" data-lit>04 · 最近在用</div>
-      <div className="tools">
-        {TOOLS.map((t) => {
-          const inner = (
-            <>
-              <code>{t.code}</code>
-              <b>{t.name}</b>
-              <span>{t.line}</span>
-            </>
-          );
-          return t.href ? (
-            <a key={t.name} className="chip" href={t.href} target="_blank" rel="noopener">{inner}</a>
-          ) : (
-            <div key={t.name} className="chip">{inner}</div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-const PLAYLIST = "https://music.163.com/playlist?id=12243639089";
-const TRACKS = [
-  ["28828076", "Where Is the Love", "Josh Vietti"],
-  ["385965", "知足", "五月天"],
-  ["37196629", "不为谁而作的歌", "林俊杰"],
-  ["27566017", "Paperman", "Christophe Beck"],
-  ["27853883", "爱，不解释", "张杰"],
-  ["2161934816", "向阳而生", "华晨宇"],
-  ["28167247", "没有理想的人不伤心", "新裤子"],
-  ["1970560262", "夜的尽头", "G.E.M.邓紫棋"],
-] as const;
-const song = (id: string) => `https://music.163.com/song?id=${id}`;
-const cover = (id: string) => withBasePath(`/images/music/${id}.jpg`);
-
-export function MusicSection() {
-  const [npId, npName, npArtist] = TRACKS[0];
-  return (
-    <section className="board-sec" id="music">
-      <div className="ph-head">
-        <div>
-          <div className="sec-label" data-lit style={{ margin: "0 0 10px" }}>05 · 音乐</div>
-          <h2 style={{ margin: 0 }}>最近在听。</h2>
-        </div>
-        <a className="ph-more" href={PLAYLIST} target="_blank" rel="noopener">完整歌单 →</a>
-      </div>
-      <div className="music component" data-comp>
-        <a className="np" href={song(npId)} target="_blank" rel="noopener">
-          <div className="np-top">
-            <img src={cover(npId)} alt={`${npName} 封面`} />
-            <div>
-              <small>NOW PLAYING</small>
-              <b>{npName}</b>
-              <span>{npArtist}</span>
-            </div>
-          </div>
-          <canvas id="scope" aria-hidden="true"></canvas>
-          <div className="np-foot">
-            <span>CH1 · 网易云音乐 · 百听不厌</span>
-            <span className="led-on">● LIVE</span>
-          </div>
-        </a>
-        <ol className="tracks">
-          {TRACKS.map(([id, name, artist], i) => (
-            <li key={id}>
-              <a href={song(id)} target="_blank" rel="noopener">
-                <span className="tn">{String(i + 1).padStart(2, "0")}</span>
-                <img src={cover(id)} alt="" loading="lazy" />
-                <span className="tt"><b>{name}</b><small>{artist}</small></span>
-                <span className="go">↗</span>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-const PHOTO_STRIP = [
-  ["p01", "深圳美术馆", "lines-red-installation"],
-  ["p05", "海边", "sea-yellow-buoy"],
-  ["p09", "深圳", "sky-rain-city"],
-  ["p03", "重庆", "lines-bridge-cables"],
-  ["p08", "香港", "sea-harbor-boat"],
-] as const;
-
 export function PhotoSection() {
+  const albumPhotos = albumPhotosFrom(SITE_PHOTOS);
   return (
-    <section className="board-sec" id="photo">
-      <div className="ph-head">
-        <div className="sec-label" data-lit style={{ margin: 0 }}>06 · 摄影</div>
-        <Link className="ph-more" href="/photography/">全部 12 张 →</Link>
+    <section className="board-sec" id="photography">
+      <span id="photo" />
+      <div className="sec-label" data-lit>
+        03 · 摄影
       </div>
-      <div className="ph-row">
-        {PHOTO_STRIP.map(([anchor, place, name], i) => (
-          <Link key={anchor} className="ph" href={`/photography/#${anchor}`}>
-            <span className="ph-ref">{String(i + 1).padStart(2, "0")} · {place}</span>
-            <span className="ph-frame">
-              <img src={withBasePath(`/images/photography/${name}-900.webp`)} alt={place} loading="lazy" />
-            </span>
-          </Link>
-        ))}
+      <h2>我眼中的世界</h2>
+      <div className="ph-page">
+        <AlbumLazy photos={albumPhotos}>
+          <div className="ph-grid">
+            {SITE_PHOTOS.map((photo, index) => {
+              const number = photoNumber(index);
+              return (
+                <a
+                  className="ph"
+                  id={`p${number}`}
+                  key={photo.name}
+                  href={withBasePath(`/images/photography/${photo.name}-1800.jpg`)}
+                >
+                  <span className="ph-ref">
+                    {number} · {photo.source}
+                  </span>
+                  <span className="ph-frame">
+                    <ResponsivePhoto
+                      name={photo.name}
+                      alt={photo.alt}
+                      width={photo.width}
+                      height={photo.height}
+                      sizes="(max-width: 800px) 50vw, 300px"
+                      loading={number === "01" ? "eager" : "lazy"}
+                    />
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </AlbumLazy>
       </div>
     </section>
   );
@@ -362,7 +266,7 @@ export function PhotoSection() {
 export function ContactSection() {
   return (
     <section className="board-sec" id="contact">
-      <div className="sec-label" data-lit>07 · 联系</div>
+      <div className="sec-label" data-lit>04 · 联系</div>
       <div className="contact">
         <div>
           <h2>聊聊？</h2>
